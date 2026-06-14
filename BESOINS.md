@@ -10,8 +10,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - Prix : `base_token_price_quote_token` via `/networks/ronin/pools/multi/{pools}` (1 appel).
        - Page : `prix.html`. Colonnes : Ressource | Prix (COIN) | Var 24h. Tri + rafraîchir + horodatage.
 
-2. [ ] **Utilisable depuis le téléphone** — via **hébergement public** (GitHub Pages), pour `index.html` ET `prix.html`.
+2. [x] **Utilisable depuis le téléphone** — via **hébergement public** (GitHub Pages), pour `index.html` ET `prix.html`.
        - Rendu mobile : OK sans modif (viewport + `overflow-x-auto`, pas de débordement à 375 px).
-       - Déploiement : dépôt GitHub `craftworld` (public) → Pages sur branche `main`. Fichiers servis : `index.html`, `prix.html`, `data.json`.
+       - Déployé : dépôt https://github.com/charlautoia/craftWorld (public), Pages sur branche `main` (root).
+       - URL : https://charlautoia.github.io/craftWorld/ (index) et /prix.html.
+       - MAJ futures : `git commit` + `git push` → redéploiement auto.
 
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->
