@@ -113,7 +113,7 @@
 <script>
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
-let rentaSort = { key: 'name', dir: 1 };
+let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de data.json), non trié
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 const fmt = (v, d=4) => v == null ? '—' : Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
@@ -150,16 +150,18 @@ function renderRenta() {
     return true;
   });
 
-  rows.sort((a, b) => {
-    const k = rentaSort.key;
-    let av = k === 'prix_live' ? (livePrice[a.pool] ?? null) : a[k];
-    let bv = k === 'prix_live' ? (livePrice[b.pool] ?? null) : b[k];
-    if (av == null && bv == null) return 0;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    if (typeof av === 'string') return av.localeCompare(bv) * rentaSort.dir;
-    return (av - bv) * rentaSort.dir;
-  });
+  if (rentaSort.key !== 'game') {          // 'game' = on garde l'ordre du jeu de data.json
+    rows.sort((a, b) => {
+      const k = rentaSort.key;
+      let av = k === 'prix_live' ? (livePrice[a.pool] ?? null) : a[k];
+      let bv = k === 'prix_live' ? (livePrice[b.pool] ?? null) : b[k];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'string') return av.localeCompare(bv) * rentaSort.dir;
+      return (av - bv) * rentaSort.dir;
+    });
+  }
 
   document.getElementById('renta-count').textContent = `${rows.length} ressources`;
 
@@ -266,8 +268,8 @@ async function init() {
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');
-    Object.keys(DATA.crafting).sort().forEach(name => {
-      sel.innerHTML += `<option value="${name}">${name}</option>`;
+    DATA.resources.forEach(r => {                 // ordre du jeu, recettes uniquement
+      if (DATA.crafting[r.name]) sel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
 
     renderRenta();

@@ -46,4 +46,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        BOLTS, KEY, CERAMICKEY, GLASSKEY, DYNOKEY ajoutées à `build_data.py` → **34/34 ressources ont un pool**.
        (>30 pools : la requête se découpe en 2 chunks, déjà géré.)
 
+7. [x] **Ordre du jeu** pour l'affichage des ressources : **EARTH, WATER, FIRE**, puis le reste
+       dans l'ordre du **Game Data** (ordre des lignes du Sheet officiel).
+       - `build_data.py` : `resources` ordonnées (plus d'alphabétique).
+       - `index.html` : tri par défaut = `'game'` (garde l'ordre de `data.json`) ; sélecteur Crafting
+         peuplé dans cet ordre. Le tri par colonne (clic) reste disponible.
+
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->

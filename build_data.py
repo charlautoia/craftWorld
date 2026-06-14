@@ -157,8 +157,12 @@ def main():
     included = select_resources(recipe_order)
     crafting = {k: v for k, v in crafting.items() if k in included}
 
+    # Ordre du jeu : EARTH, WATER, FIRE puis le reste dans l'ordre du Game Data (ordre du Sheet).
+    game_order = ["EARTH", "WATER", "FIRE"] + [n for n in recipe_order if n in included]
+    game_order += [n for n in sorted(included) if n not in game_order]   # filet de sécurité
+
     resources = []
-    for n in sorted(included):
+    for n in game_order:
         entry = {"name": n, "pool": POOLS.get(n)}
         if n in INVERTED:
             entry["quote"] = True       # prix lu via le pont USD (ressource = quote token)
