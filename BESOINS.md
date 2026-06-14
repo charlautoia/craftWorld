@@ -30,4 +30,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - Métriques d'analyse perso (prix_man, gain_coin_h…) abandonnées (sans source officielle).
        - MAJ données : `python build_data.py` puis `git push`.
 
+5. [x] **Sélection des items + pool COPPER corrigée.**
+       - Liste retenue = **factories** (du début jusqu'à **DYNAMITE** inclus) **+** **BOLTS → fin**
+         (BOLTS, KEY, CERAMICKEY, GLASSKEY, DYNOKEY) **+** éléments bruts **EARTH / FIRE / WATER**.
+         Le bloc food/outils/armes (BOWL → LOBSTER) est **exclu**. → 34 ressources, 32 recettes.
+       - Logique dans `build_data.py` (`select_resources`, marqueurs DYNAMITE et BOLTS).
+       - **COPPER** : ancienne pool COPPER/COIN morte (liquidité nulle) → nouvelle pool
+         `0xc0f4621ab3cd1405952015c84c5063db708c67d9` (**USDC/COPPER**, COPPER = quote token).
+         Prix calculé via le pont USD (`COPPER_usd / COIN_usd`) ; marqué `"quote": true` dans `data.json`.
+         Les 28 autres restent en direct (`base_token_price_quote_token`).
+
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->

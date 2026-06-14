@@ -26,7 +26,7 @@ POOLS = {
     "MUD": "0xb287ea5a5cd4f2b74571e30fdec96241aa5163d9",
     "CLAY": "0x8b1a1b7b43a53904b0a05406c13399079e553501",
     "SAND": "0x6d8839a585f7877a5e218a217c07334980f04a4a",
-    "COPPER": "0xe9e419dbe8e0e056bb91989eb10f5fa62a0cb702",
+    "COPPER": "0xc0f4621ab3cd1405952015c84c5063db708c67d9",
     "STEEL": "0x70c063f17dacb35e4b3df06c8f36020416a44a3c",
     "SCREWS": "0x0016c4c602cc1a96a9d35fe133a7e374d3cdc26d",
     "SEAWATER": "0xd1d6bb059c97295f7437ad423111047cbcddf4c6",
@@ -50,6 +50,14 @@ POOLS = {
     "HYDROGEN": "0xbb155716cd99d7ef8fd3fb45c91d39958c95b088",
     "DYNAMITE": "0x85172e7ff5040366fa5a3caf7b1bd969bb06b570",
 }
+
+# Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
+# (resource_usd / COIN_usd) au lieu de base_token_price_quote_token.
+# COPPER : seule pool liquide = USDC/COPPER (COPPER = quote). L'ancienne COPPER/COIN est morte.
+INVERTED = {"COPPER"}
+
+# Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
+ELEMENTS = ["EARTH", "FIRE", "WATER"]
 
 ID_RE = re.compile(r"^(.+)_(\d+)$")
 
@@ -117,19 +125,38 @@ def parse_recipes(rows, single_input=False):
     return crafting
 
 
+def select_resources(recipe_order):
+    """Items retenus : factories (début → DYNAMITE inclus) + items (BOLTS → fin) + éléments bruts.
+    On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
+    names = set(ELEMENTS)
+    if "DYNAMITE" in recipe_order:
+        names |= set(recipe_order[:recipe_order.index("DYNAMITE") + 1])
+    if "BOLTS" in recipe_order:
+        names |= set(recipe_order[recipe_order.index("BOLTS"):])
+    return names
+
+
 def main():
-    crafting = parse_recipes(fetch_csv(GID_RECIPES), single_input=False)
+    recipes = parse_recipes(fetch_csv(GID_RECIPES), single_input=False)  # ordre du Sheet préservé
+    recipe_order = list(recipes.keys())
     base = parse_recipes(fetch_csv(GID_BASE), single_input=True)
+
+    crafting = dict(recipes)
     # Les ressources de base ne doivent pas écraser une éventuelle recette du même nom.
     for name, levels in base.items():
         crafting.setdefault(name, levels)
-
     for levels in crafting.values():
         levels.sort(key=lambda x: x["level"])
 
-    # Liste des ressources : tout ce qui a une recette OU un pool (garde FIRE/WATER).
-    names = sorted(set(crafting) | set(POOLS))
-    resources = [{"name": n, "pool": POOLS.get(n)} for n in names]
+    included = select_resources(recipe_order)
+    crafting = {k: v for k, v in crafting.items() if k in included}
+
+    resources = []
+    for n in sorted(included):
+        entry = {"name": n, "pool": POOLS.get(n)}
+        if n in INVERTED:
+            entry["quote"] = True       # prix lu via le pont USD (ressource = quote token)
+        resources.append(entry)
 
     output = {"resources": resources, "crafting": crafting}
     with open("data.json", "w", encoding="utf-8") as f:

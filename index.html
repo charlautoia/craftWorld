@@ -214,11 +214,10 @@ async function fetchAllPrices() {
   btn.disabled = true;
   btn.textContent = '⟳ Chargement…';
 
-  const pools = DATA.resources.filter(r => r.pool).map(r => r.pool);
-  const byLower = {};                       // adresse minuscule → pool tel qu'écrit dans data.json
-  pools.forEach(p => { byLower[p.toLowerCase()] = p; });
+  const withPool = DATA.resources.filter(r => r.pool);
+  const pools = withPool.map(r => r.pool);
+  const byAddr = {};                         // adresse minuscule → attributes du pool
 
-  let ok = 0;
   try {
     for (let i = 0; i < pools.length; i += 30) {   // l'API accepte 30 pools max par appel
       const chunk = pools.slice(i, i + 30);
@@ -227,10 +226,26 @@ async function fetchAllPrices() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      for (const p of json.data) {
-        const orig = byLower[p.attributes.address.toLowerCase()];
-        if (orig) { livePrice[orig] = parseFloat(p.attributes.base_token_price_quote_token); ok++; }
-      }
+      for (const p of json.data) byAddr[p.attributes.address.toLowerCase()] = p.attributes;
+    }
+
+    // Prix du COIN en USD = quote_token_price_usd d'une pool normale (RESOURCE/COIN).
+    let coinUsd = null;
+    for (const r of withPool) {
+      if (r.quote) continue;
+      const a = byAddr[r.pool.toLowerCase()];
+      if (a) { coinUsd = parseFloat(a.quote_token_price_usd); break; }
+    }
+
+    let ok = 0;
+    for (const r of withPool) {
+      const a = byAddr[r.pool.toLowerCase()];
+      if (!a) { livePrice[r.pool] = null; continue; }
+      const price = r.quote
+        ? (coinUsd ? parseFloat(a.quote_token_price_usd) / coinUsd : null)  // ressource = quote token → pont USD
+        : parseFloat(a.base_token_price_quote_token);                       // ressource = base, quote = COIN
+      livePrice[r.pool] = price;
+      if (price != null) ok++;
     }
     status.textContent = `✓ ${ok} prix — ${new Date().toLocaleTimeString('fr-FR')}`;
   } catch (e) {
