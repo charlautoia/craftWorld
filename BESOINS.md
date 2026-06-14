@@ -40,4 +40,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
          Prix calculé via le pont USD (`COPPER_usd / COIN_usd`) ; marqué `"quote": true` dans `data.json`.
          Les 28 autres restent en direct (`base_token_price_quote_token`).
 
+6. [x] **Pools manquantes (keys/bolts) récupérées.** Trouvées via l'API de recherche GeckoTerminal
+       (`/search/pools?query=…&network=ronin`), pas via la dApp roninchain (JS, non scrapable).
+       Toutes en RESOURCE/COIN (prix direct). Tier le plus liquide retenu quand plusieurs.
+       BOLTS, KEY, CERAMICKEY, GLASSKEY, DYNOKEY ajoutées à `build_data.py` → **34/34 ressources ont un pool**.
+       (>30 pools : la requête se découpe en 2 chunks, déjà géré.)
+
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->

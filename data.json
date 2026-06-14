@@ -10,7 +10,7 @@
     },
     {
       "name": "BOLTS",
-      "pool": null
+      "pool": "0x708804f7f9e3960e282fc1835ff55439319c1925"
     },
     {
       "name": "CEMENT",
@@ -18,7 +18,7 @@
     },
     {
       "name": "CERAMICKEY",
-      "pool": null
+      "pool": "0x884a266b3c1e70cc32ed2af6483070e81b20830c"
     },
     {
       "name": "CERAMICS",
@@ -39,7 +39,7 @@
     },
     {
       "name": "DYNOKEY",
-      "pool": null
+      "pool": "0xb67521d41a2c499ceb1288e70563ca34618da866"
     },
     {
       "name": "EARTH",
@@ -71,7 +71,7 @@
     },
     {
       "name": "GLASSKEY",
-      "pool": null
+      "pool": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb"
     },
     {
       "name": "HEAT",
@@ -83,7 +83,7 @@
     },
     {
       "name": "KEY",
-      "pool": null
+      "pool": "0x9b3b09e4e3339eb429292c0054f0ab97aed5bcc1"
     },
     {
       "name": "LAVA",

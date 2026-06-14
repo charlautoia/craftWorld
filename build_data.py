@@ -49,6 +49,12 @@ POOLS = {
     "ENERGY": "0xb0a3c31aae83526fd6ee75aac552822d676f46b2",
     "HYDROGEN": "0xbb155716cd99d7ef8fd3fb45c91d39958c95b088",
     "DYNAMITE": "0x85172e7ff5040366fa5a3caf7b1bd969bb06b570",
+    # Items keys/bolts (pools RESOURCE/COIN trouvées via GeckoTerminal ; tier le plus liquide retenu).
+    "BOLTS": "0x708804f7f9e3960e282fc1835ff55439319c1925",
+    "KEY": "0x9b3b09e4e3339eb429292c0054f0ab97aed5bcc1",
+    "CERAMICKEY": "0x884a266b3c1e70cc32ed2af6483070e81b20830c",
+    "GLASSKEY": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb",
+    "DYNOKEY": "0xb67521d41a2c499ceb1288e70563ca34618da866",
 }
 
 # Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
