@@ -1,0 +1,9 @@
+{
+  "name": "craftworld",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Outil web CraftWorld (prix live + crafting). Tests de la formule coin/h.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

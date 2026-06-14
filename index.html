@@ -111,6 +111,7 @@
   </div>
 </div>
 
+<script src="coinh.js"></script>
 <script>
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
@@ -155,34 +156,12 @@ function priceByName(name) {
   return r && r.pool ? livePrice[r.pool] : undefined;
 }
 
-function durationHours(d) {
-  const p = String(d ?? '').split(':').map(Number);
-  if (p.length !== 3 || p.some(isNaN)) return null;
-  const h = p[0] + p[1] / 60 + p[2] / 3600;
-  return h > 0 ? h : null;
-}
-
-// Différence acheter vs produire, en coin/h (formule de l'onglet data, col E) :
-// coin/h = (prix_out*0.975 - Σ(input*0.95*prix_input)/output) * output / heures * 2 * (1 + bonus)
+// Différence acheter vs produire, en coin/h. Calcul pur délégué à coinh.js (testé).
 function coinPerHour(name) {
   const r = DATA.resources.find(x => x.name === name);
   if (!r || r.level == null) return null;
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
-  if (!recipe) return null;
-  const pOut = priceByName(name);
-  const hours = durationHours(recipe.duration);
-  const B = recipe.output;
-  if (pOut == null || hours == null || !B) return null;
-  let cost = 0;
-  for (const [sym, amt] of [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]]) {
-    if (sym && amt) {
-      const pin = priceByName(sym);
-      if (pin == null) return null;          // prix d'un input manquant → non calculable
-      cost += amt * 0.95 * pin;
-    }
-  }
-  const D = pOut * 0.975 - cost / B;
-  return D * B / hours * 2 * (1 + (r.bonus || 0));
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, r.bonus);
 }
 
 function onLevelChange(name, val) { factoryLevel[name] = +val; renderRenta(); }

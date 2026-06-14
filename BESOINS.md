@@ -62,5 +62,7 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - `data.json` : chaque ressource porte `level` (défaut) et `bonus` ; les niveaux dispo viennent de `crafting`.
        - Colonne triable. FIRE/WATER (sans recette) → `—`.
        - MAJ niveaux : éditer `CURRENT_LEVELS` dans `build_data.py` quand tu montes une usine.
+       - **Test de non-régression** : calcul pur extrait dans `coinh.js` (partagé page + tests) ;
+         `test/coinh.test.js` fige la formule (SEAWATER/EARTH/MUD + cas limites). Lancer : `npm test`.
 
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->
