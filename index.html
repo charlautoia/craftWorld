@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CraftWorld — Analyse</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+  .tab-btn { transition: all .2s; }
+  .tab-btn.active { background: #6366f1; color: white; }
+  th { cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { background: #334155; }
+  th.sorted-asc::after  { content: ' ↑'; color: #818cf8; }
+  th.sorted-desc::after { content: ' ↓'; color: #818cf8; }
+  tr:hover td { background: #1e293b; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .positive { color: #4ade80; }
+  .negative { color: #f87171; }
+  .neutral  { color: #94a3b8; }
+  input[type=text], select {
+    background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+    border-radius: .375rem; padding: .375rem .75rem;
+  }
+  input[type=text]:focus, select:focus { outline: 2px solid #6366f1; border-color: transparent; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: .5rem .75rem; border-bottom: 1px solid #1e293b; font-size: .85rem; }
+  th { background: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: .75rem; letter-spacing: .05em; position: sticky; top: 0; z-index: 10; }
+  .badge { display: inline-block; padding: .1rem .4rem; border-radius: .25rem; font-size: .7rem; font-weight: 600; }
+</style>
+</head>
+<body class="min-h-screen p-4">
+
+<div class="max-w-screen-xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-indigo-400">CraftWorld</h1>
+      <p class="text-slate-400 text-sm">Analyse de rentabilité — Ronin Network</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="price-status" class="text-sm text-slate-400"></span>
+      <button id="refresh-btn" onclick="fetchAllPrices()"
+        class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+        ↻ Rafraîchir les prix
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4">
+    <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Rentabilité</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
+  </div>
+
+  <!-- ── TAB RENTA ─────────────────────────────────────────────────────────── -->
+  <div id="tab-renta">
+    <div class="flex gap-3 mb-3 items-center">
+      <input type="text" id="renta-filter" placeholder="Filtrer par ressource…" class="w-56"
+             oninput="renderRenta()">
+      <label class="flex items-center gap-2 text-sm text-slate-400">
+        <input type="checkbox" id="only-pool" onchange="renderRenta()" class="accent-indigo-500">
+        Avec pool seulement
+      </label>
+      <span class="text-slate-500 text-sm" id="renta-count"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="renta-table">
+          <thead>
+            <tr>
+              <th onclick="sortRenta('name')">Ressource</th>
+              <th onclick="sortRenta('index')">Index</th>
+              <th onclick="sortRenta('rapport')">Rapport</th>
+              <th onclick="sortRenta('min_item')">Min/item</th>
+              <th onclick="sortRenta('prix_man')">Prix man</th>
+              <th onclick="sortRenta('prix_auto')">Prix auto</th>
+              <th onclick="sortRenta('prix_live')">Prix live</th>
+              <th onclick="sortRenta('coin_earth')">Coin/earth</th>
+              <th onclick="sortRenta('gain_coin_h')">Gain coin/h</th>
+              <th onclick="sortRenta('gain_kpow')">Gain/kpow</th>
+              <th>Pool</th>
+            </tr>
+          </thead>
+          <tbody id="renta-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB CRAFTING ──────────────────────────────────────────────────────── -->
+  <div id="tab-crafting" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="resource-select" onchange="renderCrafting()" class="w-48"></select>
+      <span class="text-slate-500 text-sm" id="crafting-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="crafting-table">
+          <thead>
+            <tr>
+              <th>Niveau</th>
+              <th>Output</th>
+              <th>Durée</th>
+              <th>Coin/h</th>
+              <th>Input 1</th>
+              <th>Qté 1</th>
+              <th>Input 2</th>
+              <th>Qté 2</th>
+              <th>Batterie</th>
+              <th>XP</th>
+            </tr>
+          </thead>
+          <tbody id="crafting-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let DATA = { renta: [], crafting: {} };
+let livePrice = {};      // pool → price
+let rentaSort = { key: 'index', dir: 1 };
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+const fmt = (v, d=4) => v == null ? '—' : Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
+const fmtH = (v) => {
+  if (v == null) return '—';
+  const cls = v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
+  return `<span class="${cls}">${fmt(v, 3)}</span>`;
+};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('tab-renta').classList.toggle('hidden', tab !== 'renta');
+  document.getElementById('tab-crafting').classList.toggle('hidden', tab !== 'crafting');
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting'));
+  });
+}
+
+// ── Renta ────────────────────────────────────────────────────────────────────
+function sortRenta(key) {
+  if (rentaSort.key === key) rentaSort.dir *= -1;
+  else { rentaSort.key = key; rentaSort.dir = 1; }
+  document.querySelectorAll('#renta-table th').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+  });
+  const thIdx = ['name','index','rapport','min_item','prix_man','prix_auto','prix_live','coin_earth','gain_coin_h','gain_kpow','pool'].indexOf(key);
+  const ths = document.querySelectorAll('#renta-table th');
+  if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
+  renderRenta();
+}
+
+function renderRenta() {
+  const filter = document.getElementById('renta-filter').value.toLowerCase();
+  const onlyPool = document.getElementById('only-pool').checked;
+
+  let rows = DATA.renta.filter(r => {
+    if (filter && !r.name?.toLowerCase().includes(filter)) return false;
+    if (onlyPool && !r.pool) return false;
+    return true;
+  });
+
+  rows.sort((a, b) => {
+    const k = rentaSort.key;
+    let av = k === 'prix_live' ? (livePrice[a.pool] ?? null) : a[k];
+    let bv = k === 'prix_live' ? (livePrice[b.pool] ?? null) : b[k];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (typeof av === 'string') return av.localeCompare(bv) * rentaSort.dir;
+    return (av - bv) * rentaSort.dir;
+  });
+
+  document.getElementById('renta-count').textContent = `${rows.length} ressources`;
+
+  const tbody = document.getElementById('renta-body');
+  tbody.innerHTML = rows.map(r => {
+    const live = r.pool ? livePrice[r.pool] : undefined;
+    const liveCell = r.pool
+      ? (live !== undefined
+          ? `<span class="text-amber-300 font-mono">${fmt(live, 6)}</span>`
+          : `<span class="spin neutral">⟳</span>`)
+      : '—';
+
+    const shortPool = r.pool ? r.pool.slice(0, 8) + '…' : '—';
+    const poolLink = r.pool
+      ? `<a href="https://www.geckoterminal.com/ronin/pools/${r.pool}" target="_blank"
+            class="text-indigo-400 hover:underline font-mono text-xs" title="${r.pool}">${shortPool}</a>`
+      : '—';
+
+    return `<tr>
+      <td class="font-semibold text-white">${r.name ?? '—'}</td>
+      <td class="neutral">${fmt(r.index, 0)}</td>
+      <td>${fmt(r.rapport, 3)}</td>
+      <td>${fmt(r.min_item, 6)}</td>
+      <td>${fmt(r.prix_man, 5)}</td>
+      <td>${fmt(r.prix_auto, 5)}</td>
+      <td>${liveCell}</td>
+      <td>${fmt(r.coin_earth, 6)}</td>
+      <td>${fmtH(r.gain_coin_h)}</td>
+      <td>${fmtH(r.gain_kpow)}</td>
+      <td>${poolLink}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Crafting ─────────────────────────────────────────────────────────────────
+function renderCrafting() {
+  const resource = document.getElementById('resource-select').value;
+  const levels = DATA.crafting[resource] || [];
+  document.getElementById('crafting-info').textContent = `${levels.length} niveaux`;
+
+  document.getElementById('crafting-body').innerHTML = levels.map(l => `<tr>
+    <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+    <td class="font-mono">${fmt(l.output, 0)}</td>
+    <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
+    <td>${fmtH(l.coin_h)}</td>
+    <td class="text-sky-300">${l.input1 ?? '—'}</td>
+    <td class="font-mono">${fmt(l.input1_amount, 2)}</td>
+    <td class="text-sky-300">${l.input2 ?? '—'}</td>
+    <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
+    <td class="text-amber-400">${fmt(l.battery, 0)}</td>
+    <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
+  </tr>`).join('');
+}
+
+// ── GeckoTerminal price fetch ─────────────────────────────────────────────────
+async function fetchPrice(pool, retries = 5, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/ronin/pools/${pool}`, {
+        headers: { 'Accept': 'application/json;version=20230302' }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      return parseFloat(json.data.attributes.base_token_price_quote_token);
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await sleep(delay * Math.pow(1.5, i) + Math.random() * 400);
+    }
+  }
+}
+
+async function fetchAllPrices() {
+  const btn = document.getElementById('refresh-btn');
+  const status = document.getElementById('price-status');
+  btn.disabled = true;
+  btn.textContent = '⟳ Chargement…';
+
+  const pools = DATA.renta.filter(r => r.pool).map(r => ({ name: r.name, pool: r.pool }));
+  let done = 0;
+
+  for (const { name, pool } of pools) {
+    status.textContent = `${name} (${done + 1}/${pools.length})…`;
+    try {
+      livePrice[pool] = await fetchPrice(pool);
+    } catch (e) {
+      livePrice[pool] = null;
+      console.warn(`Erreur ${name}:`, e);
+    }
+    done++;
+    renderRenta();
+    await sleep(300);
+  }
+
+  status.textContent = `✓ ${done} prix récupérés`;
+  btn.disabled = false;
+  btn.textContent = '↻ Rafraîchir les prix';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch('data.json');
+    DATA = await res.json();
+
+    // Populate crafting selector
+    const sel = document.getElementById('resource-select');
+    Object.keys(DATA.crafting).sort().forEach(name => {
+      sel.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+
+    renderRenta();
+    renderCrafting();
+    fetchAllPrices();
+  } catch (e) {
+    document.body.innerHTML += `<div class="fixed bottom-4 right-4 bg-red-900 text-red-200 p-4 rounded-xl text-sm">
+      Erreur chargement data.json : ${e.message}<br>
+      Ouvre ce fichier via un serveur local (ex: <code>python -m http.server</code>)
+    </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
