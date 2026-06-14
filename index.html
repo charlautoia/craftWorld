@@ -37,7 +37,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold text-indigo-400">CraftWorld</h1>
-      <p class="text-slate-400 text-sm">Analyse de rentabilité — Ronin Network</p>
+      <p class="text-slate-400 text-sm">Game Data officiel + prix live — Ronin Network</p>
     </div>
     <div class="flex items-center gap-3">
       <span id="price-status" class="text-sm text-slate-400"></span>
@@ -50,7 +50,7 @@
 
   <!-- Tabs -->
   <div class="flex gap-2 mb-4">
-    <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Rentabilité</button>
+    <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Prix</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
   </div>
 
@@ -71,15 +71,7 @@
           <thead>
             <tr>
               <th onclick="sortRenta('name')">Ressource</th>
-              <th onclick="sortRenta('index')">Index</th>
-              <th onclick="sortRenta('rapport')">Rapport</th>
-              <th onclick="sortRenta('min_item')">Min/item</th>
-              <th onclick="sortRenta('prix_man')">Prix man</th>
-              <th onclick="sortRenta('prix_auto')">Prix auto</th>
-              <th onclick="sortRenta('prix_live')">Prix live</th>
-              <th onclick="sortRenta('coin_earth')">Coin/earth</th>
-              <th onclick="sortRenta('gain_coin_h')">Gain coin/h</th>
-              <th onclick="sortRenta('gain_kpow')">Gain/kpow</th>
+              <th onclick="sortRenta('prix_live')">Prix live (COIN)</th>
               <th>Pool</th>
             </tr>
           </thead>
@@ -103,12 +95,11 @@
               <th>Niveau</th>
               <th>Output</th>
               <th>Durée</th>
-              <th>Coin/h</th>
               <th>Input 1</th>
               <th>Qté 1</th>
               <th>Input 2</th>
               <th>Qté 2</th>
-              <th>Batterie</th>
+              <th>Power</th>
               <th>XP</th>
             </tr>
           </thead>
@@ -120,17 +111,12 @@
 </div>
 
 <script>
-let DATA = { renta: [], crafting: {} };
+let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
-let rentaSort = { key: 'index', dir: 1 };
+let rentaSort = { key: 'name', dir: 1 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 const fmt = (v, d=4) => v == null ? '—' : Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
-const fmtH = (v) => {
-  if (v == null) return '—';
-  const cls = v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
-  return `<span class="${cls}">${fmt(v, 3)}</span>`;
-};
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 function showTab(tab) {
@@ -148,7 +134,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['name','index','rapport','min_item','prix_man','prix_auto','prix_live','coin_earth','gain_coin_h','gain_kpow','pool'].indexOf(key);
+  const thIdx = ['name','prix_live','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -158,7 +144,7 @@ function renderRenta() {
   const filter = document.getElementById('renta-filter').value.toLowerCase();
   const onlyPool = document.getElementById('only-pool').checked;
 
-  let rows = DATA.renta.filter(r => {
+  let rows = DATA.resources.filter(r => {
     if (filter && !r.name?.toLowerCase().includes(filter)) return false;
     if (onlyPool && !r.pool) return false;
     return true;
@@ -194,15 +180,7 @@ function renderRenta() {
 
     return `<tr>
       <td class="font-semibold text-white">${r.name ?? '—'}</td>
-      <td class="neutral">${fmt(r.index, 0)}</td>
-      <td>${fmt(r.rapport, 3)}</td>
-      <td>${fmt(r.min_item, 6)}</td>
-      <td>${fmt(r.prix_man, 5)}</td>
-      <td>${fmt(r.prix_auto, 5)}</td>
       <td>${liveCell}</td>
-      <td>${fmt(r.coin_earth, 6)}</td>
-      <td>${fmtH(r.gain_coin_h)}</td>
-      <td>${fmtH(r.gain_kpow)}</td>
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
@@ -218,12 +196,11 @@ function renderCrafting() {
     <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
     <td class="font-mono">${fmt(l.output, 0)}</td>
     <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
-    <td>${fmtH(l.coin_h)}</td>
     <td class="text-sky-300">${l.input1 ?? '—'}</td>
     <td class="font-mono">${fmt(l.input1_amount, 2)}</td>
     <td class="text-sky-300">${l.input2 ?? '—'}</td>
     <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
-    <td class="text-amber-400">${fmt(l.battery, 0)}</td>
+    <td class="text-amber-400">${fmt(l.power, 0)}</td>
     <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
   </tr>`).join('');
 }
@@ -237,7 +214,7 @@ async function fetchAllPrices() {
   btn.disabled = true;
   btn.textContent = '⟳ Chargement…';
 
-  const pools = DATA.renta.filter(r => r.pool).map(r => r.pool);
+  const pools = DATA.resources.filter(r => r.pool).map(r => r.pool);
   const byLower = {};                       // adresse minuscule → pool tel qu'écrit dans data.json
   pools.forEach(p => { byLower[p.toLowerCase()] = p; });
 
@@ -269,7 +246,7 @@ async function fetchAllPrices() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const res = await fetch('data.json');
+    const res = await fetch('data.json?v=' + Date.now());   // cache-bust : toujours la dernière version publiée
     DATA = await res.json();
 
     // Populate crafting selector

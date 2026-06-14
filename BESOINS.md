@@ -1,7 +1,9 @@
 # CraftWorld — Utilitaire web : liste des besoins
 
-Source de vérité : `craft world.xlsx` → `data.json` (via `extract_data.py`).
+Source de vérité (entrée) : **Game Data officiel de la team** (Google Sheet
+`1HIJtfYQjsf7qXRI1ca8EdZMMmbWzEpf5U1a8IvZ3nRE`) → `data.json` (via `build_data.py`).
 Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
+`extract_data.py` (ancien pipeline depuis `craft world.xlsx`) = **legacy**, plus utilisé.
 
 ## Besoins (à toujours garder OK)
 
@@ -18,5 +20,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
 
 3. [x] **Page unique (merge)** — `prix.html` supprimé ; sa logique de prix (1 appel multi-pools)
        intégrée à la colonne **Prix live** de `index.html`.
+
+4. [x] **Entrée = Game Data officiel de la team** (bascule complète, plus l'Excel perso).
+       - `build_data.py` télécharge le Sheet officiel (onglets recettes + ressources de base) → `data.json`.
+       - Structure `data.json` : `resources` (liste + pool) et `crafting` (recettes, ~59 ressources).
+       - Mapping `ressource → pool` (29, FIRE/WATER inclus) maintenu dans `build_data.py` (absent du Sheet officiel).
+       - `index.html` : onglet **Prix** (Ressource | Prix live COIN | Pool) + onglet **Crafting** (toutes les recettes officielles).
+       - Cache-bust sur `data.json` → toujours la dernière version publiée.
+       - Métriques d'analyse perso (prix_man, gain_coin_h…) abandonnées (sans source officielle).
+       - MAJ données : `python build_data.py` puis `git push`.
 
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->
