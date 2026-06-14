@@ -65,6 +65,21 @@ INVERTED = {"COPPER"}
 # Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
 ELEMENTS = ["EARTH", "FIRE", "WATER"]
 
+# Niveau d'usine actuel par ressource (= défaut du sélecteur de niveau dans l'UI ; ta progression).
+CURRENT_LEVELS = {
+    "MUD": 17, "CLAY": 16, "SAND": 11, "COPPER": 6, "STEEL": 8, "SCREWS": 7,
+    "SEAWATER": 30, "ALGAE": 20, "OXYGEN": 20, "GAS": 15, "FUEL": 15, "OIL": 10,
+    "HEAT": 29, "LAVA": 19, "GLASS": 5, "SULFUR": 2, "FIBERGLASS": 2, "CERAMICS": 10,
+    "STONE": 6, "STEAM": 1, "CEMENT": 6, "ACID": 4, "PLASTICS": 4, "ENERGY": 5,
+    "HYDROGEN": 5, "DYNAMITE": 5,
+}
+
+# Bonus de production par usine (col "bonus" de l'Excel) ; intervient dans coin/h via (1 + bonus).
+BONUS = {
+    "SEAWATER": 0.47, "ALGAE": 0.47, "CERAMICS": 0.39, "STEEL": 0.39, "OXYGEN": 0.39,
+    "GLASS": 0.25, "GAS": 0.25, "FUEL": 0.25, "SCREWS": 0.52, "STONE": 0.09,
+}
+
 ID_RE = re.compile(r"^(.+)_(\d+)$")
 
 
@@ -166,6 +181,12 @@ def main():
         entry = {"name": n, "pool": POOLS.get(n)}
         if n in INVERTED:
             entry["quote"] = True       # prix lu via le pont USD (ressource = quote token)
+        avail = sorted(l["level"] for l in crafting.get(n, []))
+        if avail:                       # niveau par défaut = niveau actuel (sinon max), borné au dispo
+            lvl = CURRENT_LEVELS.get(n, avail[-1])
+            entry["level"] = max(avail[0], min(lvl, avail[-1]))
+        if BONUS.get(n):
+            entry["bonus"] = BONUS[n]
         resources.append(entry)
 
     output = {"resources": resources, "crafting": crafting}

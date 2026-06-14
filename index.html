@@ -72,6 +72,7 @@
             <tr>
               <th onclick="sortRenta('name')">Ressource</th>
               <th onclick="sortRenta('prix_live')">Prix live (COIN)</th>
+              <th onclick="sortRenta('coinh')">coin/h</th>
               <th>Pool</th>
             </tr>
           </thead>
@@ -139,10 +140,64 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['name','prix_live','pool'].indexOf(key);
+  const thIdx = ['name','prix_live','coinh','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
+}
+
+// ── coin/h ─────────────────────────────────────────────────────────────────────
+let factoryLevel = {};   // ressource → niveau d'usine choisi
+let pricesLoaded = false;
+
+function priceByName(name) {
+  const r = DATA.resources.find(x => x.name === name);
+  return r && r.pool ? livePrice[r.pool] : undefined;
+}
+
+function durationHours(d) {
+  const p = String(d ?? '').split(':').map(Number);
+  if (p.length !== 3 || p.some(isNaN)) return null;
+  const h = p[0] + p[1] / 60 + p[2] / 3600;
+  return h > 0 ? h : null;
+}
+
+// Différence acheter vs produire, en coin/h (formule de l'onglet data, col E) :
+// coin/h = (prix_out*0.975 - Σ(input*0.95*prix_input)/output) * output / heures * 2 * (1 + bonus)
+function coinPerHour(name) {
+  const r = DATA.resources.find(x => x.name === name);
+  if (!r || r.level == null) return null;
+  const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
+  if (!recipe) return null;
+  const pOut = priceByName(name);
+  const hours = durationHours(recipe.duration);
+  const B = recipe.output;
+  if (pOut == null || hours == null || !B) return null;
+  let cost = 0;
+  for (const [sym, amt] of [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]]) {
+    if (sym && amt) {
+      const pin = priceByName(sym);
+      if (pin == null) return null;          // prix d'un input manquant → non calculable
+      cost += amt * 0.95 * pin;
+    }
+  }
+  const D = pOut * 0.975 - cost / B;
+  return D * B / hours * 2 * (1 + (r.bonus || 0));
+}
+
+function onLevelChange(name, val) { factoryLevel[name] = +val; renderRenta(); }
+
+function coinhCell(r) {
+  if (r.level == null) return '—';            // pas de recette (FIRE/WATER)
+  const opts = (DATA.crafting[r.name] || []).map(l =>
+    `<option value="${l.level}"${l.level === factoryLevel[r.name] ? ' selected' : ''}>niv ${l.level}</option>`).join('');
+  const sel = `<select onchange="onLevelChange('${r.name}', this.value)"
+       class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5 mr-2">${opts}</select>`;
+  const v = coinPerHour(r.name);
+  const val = v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
+    : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+  return `<div class="flex items-center">${sel}${val}</div>`;
 }
 
 function renderRenta() {
@@ -158,8 +213,9 @@ function renderRenta() {
   if (rentaSort.key !== 'game') {          // 'game' = on garde l'ordre du jeu de data.json
     rows.sort((a, b) => {
       const k = rentaSort.key;
-      let av = k === 'prix_live' ? (livePrice[a.pool] ?? null) : a[k];
-      let bv = k === 'prix_live' ? (livePrice[b.pool] ?? null) : b[k];
+      const pick = r => k === 'prix_live' ? (livePrice[r.pool] ?? null)
+                      : k === 'coinh' ? (coinPerHour(r.name) ?? null) : r[k];
+      let av = pick(a), bv = pick(b);
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;
@@ -188,6 +244,7 @@ function renderRenta() {
     return `<tr>
       <td class="font-semibold text-white">${r.name ?? '—'}</td>
       <td>${liveCell}</td>
+      <td>${coinhCell(r)}</td>
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
@@ -259,6 +316,7 @@ async function fetchAllPrices() {
     status.textContent = `Erreur : ${e.message}`;
     console.error(e);
   } finally {
+    pricesLoaded = true;
     btn.disabled = false;
     btn.textContent = '↻ Rafraîchir les prix';
     renderRenta();
@@ -270,6 +328,9 @@ async function init() {
   try {
     const res = await fetch('data.json?v=' + Date.now());   // cache-bust : toujours la dernière version publiée
     DATA = await res.json();
+
+    // Niveau d'usine par défaut (= niveau actuel) pour le calcul coin/h
+    DATA.resources.forEach(r => { if (r.level != null) factoryLevel[r.name] = r.level; });
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');

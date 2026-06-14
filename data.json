@@ -2,7 +2,8 @@
   "resources": [
     {
       "name": "EARTH",
-      "pool": "0xc356cd52364541379ad4d31a889b7031e758220a"
+      "pool": "0xc356cd52364541379ad4d31a889b7031e758220a",
+      "level": 50
     },
     {
       "name": "WATER",
@@ -14,128 +15,169 @@
     },
     {
       "name": "MUD",
-      "pool": "0xb287ea5a5cd4f2b74571e30fdec96241aa5163d9"
+      "pool": "0xb287ea5a5cd4f2b74571e30fdec96241aa5163d9",
+      "level": 17
     },
     {
       "name": "CLAY",
-      "pool": "0x8b1a1b7b43a53904b0a05406c13399079e553501"
+      "pool": "0x8b1a1b7b43a53904b0a05406c13399079e553501",
+      "level": 16
     },
     {
       "name": "SAND",
-      "pool": "0x6d8839a585f7877a5e218a217c07334980f04a4a"
+      "pool": "0x6d8839a585f7877a5e218a217c07334980f04a4a",
+      "level": 11
     },
     {
       "name": "COPPER",
       "pool": "0xc0f4621ab3cd1405952015c84c5063db708c67d9",
-      "quote": true
+      "quote": true,
+      "level": 6
     },
     {
       "name": "SEAWATER",
-      "pool": "0xd1d6bb059c97295f7437ad423111047cbcddf4c6"
+      "pool": "0xd1d6bb059c97295f7437ad423111047cbcddf4c6",
+      "level": 30,
+      "bonus": 0.47
     },
     {
       "name": "HEAT",
-      "pool": "0x6ccd01c951e57d82be8dccb90c01a58bfb4d83cd"
+      "pool": "0x6ccd01c951e57d82be8dccb90c01a58bfb4d83cd",
+      "level": 29
     },
     {
       "name": "ALGAE",
-      "pool": "0xe63f8cefea9a17a259bb3b375929bd10d5e1cdfa"
+      "pool": "0xe63f8cefea9a17a259bb3b375929bd10d5e1cdfa",
+      "level": 20,
+      "bonus": 0.47
     },
     {
       "name": "LAVA",
-      "pool": "0x54ae64826ca9d440ede8c33e6cf4cfa1a3aa5801"
+      "pool": "0x54ae64826ca9d440ede8c33e6cf4cfa1a3aa5801",
+      "level": 19
     },
     {
       "name": "CERAMICS",
-      "pool": "0xfa3a564b27deb29781f80032df662a4406eebef6"
+      "pool": "0xfa3a564b27deb29781f80032df662a4406eebef6",
+      "level": 10,
+      "bonus": 0.39
     },
     {
       "name": "STEEL",
-      "pool": "0x70c063f17dacb35e4b3df06c8f36020416a44a3c"
+      "pool": "0x70c063f17dacb35e4b3df06c8f36020416a44a3c",
+      "level": 8,
+      "bonus": 0.39
     },
     {
       "name": "OXYGEN",
-      "pool": "0x4343846ebe54dcd40ba572275640230d533296e5"
+      "pool": "0x4343846ebe54dcd40ba572275640230d533296e5",
+      "level": 20,
+      "bonus": 0.39
     },
     {
       "name": "GLASS",
-      "pool": "0x7aa1cc00ca62982ab10d12fd4f6b6687f33011ad"
+      "pool": "0x7aa1cc00ca62982ab10d12fd4f6b6687f33011ad",
+      "level": 5,
+      "bonus": 0.25
     },
     {
       "name": "GAS",
-      "pool": "0x4782e36bbe6e9abca5357d3e43a090fa772de71b"
+      "pool": "0x4782e36bbe6e9abca5357d3e43a090fa772de71b",
+      "level": 15,
+      "bonus": 0.25
     },
     {
       "name": "STONE",
-      "pool": "0xda4145a4975b1219e85a233673187309c4840044"
+      "pool": "0xda4145a4975b1219e85a233673187309c4840044",
+      "level": 6,
+      "bonus": 0.09
     },
     {
       "name": "STEAM",
-      "pool": "0x7bf03c63adfded079adbd9f807ccce0fd28b8fd8"
+      "pool": "0x7bf03c63adfded079adbd9f807ccce0fd28b8fd8",
+      "level": 1
     },
     {
       "name": "SCREWS",
-      "pool": "0x0016c4c602cc1a96a9d35fe133a7e374d3cdc26d"
+      "pool": "0x0016c4c602cc1a96a9d35fe133a7e374d3cdc26d",
+      "level": 7,
+      "bonus": 0.52
     },
     {
       "name": "FUEL",
-      "pool": "0x0f8f4dcf1b6eb9f5c0e8fbb9cd6879aa3983c8bc"
+      "pool": "0x0f8f4dcf1b6eb9f5c0e8fbb9cd6879aa3983c8bc",
+      "level": 15,
+      "bonus": 0.25
     },
     {
       "name": "CEMENT",
-      "pool": "0x491a412400840651c243acfc1ed9947ffe8a4e8f"
+      "pool": "0x491a412400840651c243acfc1ed9947ffe8a4e8f",
+      "level": 6
     },
     {
       "name": "OIL",
-      "pool": "0x6f363e6760876a4c66730fbbefccdd3014b6220c"
+      "pool": "0x6f363e6760876a4c66730fbbefccdd3014b6220c",
+      "level": 10
     },
     {
       "name": "ACID",
-      "pool": "0xefc128c4cb990a5ecc88ff71e9efcc0eaef434d2"
+      "pool": "0xefc128c4cb990a5ecc88ff71e9efcc0eaef434d2",
+      "level": 4
     },
     {
       "name": "SULFUR",
-      "pool": "0x346e30b7ca273fb001eec84fabf2b693617df710"
+      "pool": "0x346e30b7ca273fb001eec84fabf2b693617df710",
+      "level": 2
     },
     {
       "name": "PLASTICS",
-      "pool": "0x0ab775634107063a7c16c6c8e0fd6bda1f219ae6"
+      "pool": "0x0ab775634107063a7c16c6c8e0fd6bda1f219ae6",
+      "level": 4
     },
     {
       "name": "FIBERGLASS",
-      "pool": "0x0ffb7bd0bc009a01f9f9e95a0f563bad2189f151"
+      "pool": "0x0ffb7bd0bc009a01f9f9e95a0f563bad2189f151",
+      "level": 2
     },
     {
       "name": "ENERGY",
-      "pool": "0xb0a3c31aae83526fd6ee75aac552822d676f46b2"
+      "pool": "0xb0a3c31aae83526fd6ee75aac552822d676f46b2",
+      "level": 5
     },
     {
       "name": "HYDROGEN",
-      "pool": "0xbb155716cd99d7ef8fd3fb45c91d39958c95b088"
+      "pool": "0xbb155716cd99d7ef8fd3fb45c91d39958c95b088",
+      "level": 5
     },
     {
       "name": "DYNAMITE",
-      "pool": "0x85172e7ff5040366fa5a3caf7b1bd969bb06b570"
+      "pool": "0x85172e7ff5040366fa5a3caf7b1bd969bb06b570",
+      "level": 5
     },
     {
       "name": "BOLTS",
-      "pool": "0x708804f7f9e3960e282fc1835ff55439319c1925"
+      "pool": "0x708804f7f9e3960e282fc1835ff55439319c1925",
+      "level": 10
     },
     {
       "name": "KEY",
-      "pool": "0x9b3b09e4e3339eb429292c0054f0ab97aed5bcc1"
+      "pool": "0x9b3b09e4e3339eb429292c0054f0ab97aed5bcc1",
+      "level": 10
     },
     {
       "name": "CERAMICKEY",
-      "pool": "0x884a266b3c1e70cc32ed2af6483070e81b20830c"
+      "pool": "0x884a266b3c1e70cc32ed2af6483070e81b20830c",
+      "level": 5
     },
     {
       "name": "GLASSKEY",
-      "pool": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb"
+      "pool": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb",
+      "level": 5
     },
     {
       "name": "DYNOKEY",
-      "pool": "0xb67521d41a2c499ceb1288e70563ca34618da866"
+      "pool": "0xb67521d41a2c499ceb1288e70563ca34618da866",
+      "level": 5
     }
   ],
   "crafting": {

@@ -53,4 +53,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - `index.html` : tri par défaut = `'game'` (garde l'ordre de `data.json`) ; sélecteur Crafting
          peuplé dans cet ordre. Le tri par colonne (clic) reste disponible.
 
+8. [x] **Colonne `coin/h`** (après le prix) = différence acheter vs produire, ramenée en coin/h.
+       - Formule (reprise de l'Excel onglet `data` col E, validée numériquement) :
+         `coin/h = (prix_out×0,975 − Σ(qté_input×0,95×prix_input)/output) × output / heures × 2 × (1 + bonus)`
+         (prix live en COIN ; `×2` constant ; `bonus` par usine ; heures = durée d'un cycle).
+       - **Sélecteur de niveau d'usine par ressource** (défaut = niveau actuel `CURRENT_LEVELS` dans
+         `build_data.py`, repris de l'Excel) ; changer le niveau recalcule le coin/h.
+       - `data.json` : chaque ressource porte `level` (défaut) et `bonus` ; les niveaux dispo viennent de `crafting`.
+       - Colonne triable. FIRE/WATER (sans recette) → `—`.
+       - MAJ niveaux : éditer `CURRENT_LEVELS` dans `build_data.py` quand tu montes une usine.
+
 <!-- Prochains besoins à ajouter ici, au fur et à mesure. -->
