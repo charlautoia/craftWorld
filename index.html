@@ -131,7 +131,6 @@ const fmtH = (v) => {
   const cls = v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
   return `<span class="${cls}">${fmt(v, 3)}</span>`;
 };
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 function showTab(tab) {
@@ -229,22 +228,8 @@ function renderCrafting() {
   </tr>`).join('');
 }
 
-// ── GeckoTerminal price fetch ─────────────────────────────────────────────────
-async function fetchPrice(pool, retries = 5, delay = 500) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/ronin/pools/${pool}`, {
-        headers: { 'Accept': 'application/json;version=20230302' }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      return parseFloat(json.data.attributes.base_token_price_quote_token);
-    } catch (e) {
-      if (i === retries - 1) throw e;
-      await sleep(delay * Math.pow(1.5, i) + Math.random() * 400);
-    }
-  }
-}
+// ── GeckoTerminal price fetch (prix en COIN, 1 appel multi-pools) ─────────────
+const POOL_API = 'https://api.geckoterminal.com/api/v2/networks/ronin/pools/multi/';
 
 async function fetchAllPrices() {
   const btn = document.getElementById('refresh-btn');
@@ -252,25 +237,33 @@ async function fetchAllPrices() {
   btn.disabled = true;
   btn.textContent = '⟳ Chargement…';
 
-  const pools = DATA.renta.filter(r => r.pool).map(r => ({ name: r.name, pool: r.pool }));
-  let done = 0;
+  const pools = DATA.renta.filter(r => r.pool).map(r => r.pool);
+  const byLower = {};                       // adresse minuscule → pool tel qu'écrit dans data.json
+  pools.forEach(p => { byLower[p.toLowerCase()] = p; });
 
-  for (const { name, pool } of pools) {
-    status.textContent = `${name} (${done + 1}/${pools.length})…`;
-    try {
-      livePrice[pool] = await fetchPrice(pool);
-    } catch (e) {
-      livePrice[pool] = null;
-      console.warn(`Erreur ${name}:`, e);
+  let ok = 0;
+  try {
+    for (let i = 0; i < pools.length; i += 30) {   // l'API accepte 30 pools max par appel
+      const chunk = pools.slice(i, i + 30);
+      const res = await fetch(POOL_API + chunk.join(','), {
+        headers: { 'Accept': 'application/json;version=20230302' }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      for (const p of json.data) {
+        const orig = byLower[p.attributes.address.toLowerCase()];
+        if (orig) { livePrice[orig] = parseFloat(p.attributes.base_token_price_quote_token); ok++; }
+      }
     }
-    done++;
+    status.textContent = `✓ ${ok} prix — ${new Date().toLocaleTimeString('fr-FR')}`;
+  } catch (e) {
+    status.textContent = `Erreur : ${e.message}`;
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ Rafraîchir les prix';
     renderRenta();
-    await sleep(300);
   }
-
-  status.textContent = `✓ ${done} prix récupérés`;
-  btn.disabled = false;
-  btn.textContent = '↻ Rafraîchir les prix';
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
