@@ -8,9 +8,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
 ## Besoins (à toujours garder OK)
 
 1. [x] **Afficher le prix courant de chaque ressource** — en **COIN** (monnaie du jeu).
-       - Source mapping ressource→pool : `data.json` (feuille `renta`). Pools = tokens officiels on-chain.
-       - Prix : `base_token_price_quote_token` via `/networks/ronin/pools/multi/{pools}` (1 appel pour les 29).
+       - Source mapping ressource→pool : `data.json`. Pools = tokens officiels on-chain.
+       - Prix : `base_token_price_quote_token` via `/networks/ronin/pools/multi/{pools}` (1 appel ; chunks de 30).
        - Affiché dans la colonne **Prix live** de `index.html` (page unique).
+       - **Format** (`fmtPrice`) : 3 chiffres significatifs ; si > 1000 → entier (décimales ignorées).
 
 2. [x] **Utilisable depuis le téléphone** — via **hébergement public** (GitHub Pages).
        - Rendu mobile : OK (viewport + `overflow-x-auto`, pas de débordement à 375 px).

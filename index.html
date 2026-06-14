@@ -117,6 +117,11 @@ let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de da
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 const fmt = (v, d=4) => v == null ? '—' : Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
+// Prix : 3 chiffres significatifs ; si > 1000, entier (décimales ignorées).
+const fmtPrice = v => v == null ? '—'
+  : v > 1000
+    ? Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 })
+    : Number(v).toLocaleString('fr-FR', { maximumSignificantDigits: 3 });
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 function showTab(tab) {
@@ -170,7 +175,7 @@ function renderRenta() {
     const live = r.pool ? livePrice[r.pool] : undefined;
     const liveCell = r.pool
       ? (live !== undefined
-          ? `<span class="text-amber-300 font-mono">${fmt(live, 6)}</span>`
+          ? `<span class="text-amber-300 font-mono">${fmtPrice(live)}</span>`
           : `<span class="spin neutral">⟳</span>`)
       : '—';
 
