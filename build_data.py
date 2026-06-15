@@ -114,6 +114,13 @@ def sym(val):
     return s or None
 
 
+def compact(v):
+    """Réduit les flottants entiers en int (3.0 -> 3) pour alléger data.json. None/str inchangés."""
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    return v
+
+
 def parse_recipes(rows, single_input=False):
     """Regroupe les lignes ID=RESOURCE_niveau en {resource: [niveaux...]}."""
     crafting = {}
@@ -139,7 +146,6 @@ def parse_recipes(rows, single_input=False):
             "input1_amount": in1_amt,
             "input2": in2_sym,
             "input2_amount": in2_amt,
-            "yield_pct": sym(row.get("YIELD")),
             "power": num(row.get("POWER COST")),
             "xp": xp,
         })
@@ -189,9 +195,14 @@ def main():
             entry["bonus"] = BONUS[n]
         resources.append(entry)
 
+    for levels in crafting.values():       # allège : flottants entiers -> int
+        for l in levels:
+            for k in ("output", "input1_amount", "input2_amount", "power", "xp"):
+                l[k] = compact(l[k])
+
     output = {"resources": resources, "crafting": crafting}
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+    with open("data.json", "w", encoding="utf-8") as f:        # minifié : fichier généré, jamais édité à la main
+        json.dump(output, f, ensure_ascii=False, separators=(",", ":"))
 
     with_pool = sum(1 for r in resources if r["pool"])
     print(f"data.json généré : {len(resources)} ressources ({with_pool} avec pool), "

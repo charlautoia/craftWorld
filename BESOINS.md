@@ -66,13 +66,17 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
          `test/coinh.test.js` fige la formule (SEAWATER/EARTH/MUD + cas limites). Lancer : `npm test`.
 
 9. [x] **Mastery éditable + niveau en 1re colonne + persistance navigateur.**
-       - Le facteur `0,95` des inputs (Mastery du jeu) devient une **valeur par ressource**, saisie dans une
-         **colonne Mastery éditable** (après coin/h ; défaut 0,95). Passée à `coinh.js` (param `mastery`).
-       - Le **sélecteur de niveau** passe en **1re colonne** (tout à gauche) ; coin/h n'affiche plus que la valeur.
+       - La Mastery du jeu devient une **valeur par ressource**, saisie dans une **colonne Mastery éditable**
+         (après coin/h). Saisie **en pourcentage** (comme l'affichage du jeu ; défaut **5,3 %**, max 100, pas 0,1).
+         `app.js` la convertit en facteur `1 − mastery/100` avant `coinh.js` (param `mastery` = facteur, testé).
+         Clé localStorage `cw_mastery_pct` (l'ancienne `cw_mastery`, en facteur, est abandonnée).
+       - Le **sélecteur de niveau** est en **1re colonne** (tout à gauche) ; il s'applique à la ligne (recalcule
+         le coin/h de cette ressource). coin/h n'affiche que la valeur.
        - **Persistance localStorage** (`cw_levels`, `cw_mastery`) : tes niveaux + masteries survivent au rechargement.
          Saisie 100% dans la page, rien à re-déployer.
        - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
-       - Test : `coinh.js` accepte la mastery, couvert par `test/coinh.test.js` (7 tests).
+       - Test : `coinh.js` accepte la mastery (facteur), couvert par `test/coinh.test.js`
+         (dont un test ancrant `5,3 % → facteur 0,947`).
 
 10. [x] **Colonnes variation 24h et 1 semaine** (après le prix).
         - **24h** : `price_change_percentage.h24` (déjà dans le fetch de prix, instantané).
@@ -83,3 +87,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - L'API n'expose rien au-delà de 24h en immédiat (m5…h24) ; tout horizon ≥ qq jours passe par l'OHLCV
           (un seul appel/pool ramène tout l'historique : 7j/15j/30j possibles au même coût si besoin un jour).
         - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Pool.
+
+11. [x] **Réorganisation pour réduire la conso de tokens** (refacto, pas de changement fonctionnel).
+        - `data.json` **minifié** + champ `yield_pct` (inutilisé) retiré + flottants entiers → int :
+          **178 KB → 87 KB (−51 %)**. `build_data.py` produit directement ce format (`separators=(",",":")`).
+        - Le JS d'`index.html` est extrait dans **`app.js`** (`index.html` ne garde que HTML+CSS, ~5 KB) ;
+          chargé via `<script src="app.js">`. `coinh.js` reste séparé. Les éditions de logique ne relisent plus le HTML.
+        - Vérifié : app charge (34 ressources), 8/8 tests, rendu identique. data.json reste 100 % généré.

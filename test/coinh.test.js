@@ -42,6 +42,13 @@ test('mastery personnalisée (remplace le 0.95)', () => {
   near(coinPerHour(recipe, 5, prices({ A: 1 }), 0), 89.9);
 });
 
+test('Mastery 5.3 % -> facteur (1 - 5.3/100) = 0.947', () => {
+  // L'UI saisit la Mastery en % ; app.js la convertit en facteur 1 - pct/100 avant coinh.js.
+  const recipe = { output: 10, duration: '1:00:00', input1: 'A', input1_amount: 4 };
+  // D = 5*0.975 - (4*0.947*1)/10 = 4.875 - 0.3788 = 4.4962 ; coin/h = 4.4962*10/1*2 = 89.924
+  near(coinPerHour(recipe, 5, prices({ A: 1 }), 0, 1 - 5.3 / 100), 89.924);
+});
+
 test('deux inputs', () => {
   const recipe = { output: 10, duration: '1:00:00', input1: 'A', input1_amount: 4, input2: 'B', input2_amount: 2 };
   // D = 5*0.975 - (4*0.95*1 + 2*0.95*3)/10 = 4.875 - (3.8+5.7)/10 = 4.875-0.95 = 3.925
