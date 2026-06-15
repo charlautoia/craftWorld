@@ -55,28 +55,31 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
 
 8. [x] **Colonne `coin/h`** (après le prix) = différence acheter vs produire, ramenée en coin/h.
        - Formule (reprise de l'Excel onglet `data` col E, validée numériquement) :
-         `coin/h = (prix_out×0,975 − Σ(qté_input×0,95×prix_input)/output) × output / heures × 2 × (1 + bonus)`
-         (prix live en COIN ; `×2` constant ; `bonus` par usine ; heures = durée d'un cycle).
+         `coin/h = (prix_out×0,975 − Σ(qté_input×yf×prix_input)/output) × output / heures × 2 × (1 + bonus)`
+         (prix live en COIN ; heures = durée d'un cycle). Multiplicateurs de **vitesse** :
+         `×2` = **bonus vidéo +100 % permanent** ("Speed Bonus from Video") ; `×(1+bonus)` = **Speed bonus Workshop**
+         (cumul multiplicatif → durée effective = durée / (2×(1+bonus)) ; vérifié SCREWS niv 7 : 15h/(2×1,52) ≈ 4h57m).
+         `yf` = facteur de **Yield** = yield_niveau / (yield_niveau + mastery) → le yield réduit la conso d'inputs
+         (yield_niveau = Game Data `yield_pct` ; mastery en % ; vérifié SCREWS niv 7 : 2,85×105,31/110,8 = 2,71 = le jeu). Cf. besoin #13.
        - **Sélecteur de niveau d'usine par ressource** (défaut = niveau actuel `CURRENT_LEVELS` dans
          `build_data.py`, repris de l'Excel) ; changer le niveau recalcule le coin/h.
        - `data.json` : chaque ressource porte `level` (défaut) et `bonus` ; les niveaux dispo viennent de `crafting`.
        - Colonne triable. FIRE/WATER (sans recette) → `—`.
        - MAJ niveaux : éditer `CURRENT_LEVELS` dans `build_data.py` quand tu montes une usine.
        - **Test de non-régression** : calcul pur extrait dans `coinh.js` (partagé page + tests) ;
-         `test/coinh.test.js` fige la formule (SEAWATER/EARTH/MUD + cas limites). Lancer : `npm test`.
+         `test/coinh.test.js` fige la formule (SCREWS niv 7 réel : yield + speed ; EARTH/MUD + cas limites). Lancer : `npm test`.
 
 9. [x] **Mastery éditable + niveau en 1re colonne + persistance navigateur.**
        - La Mastery du jeu devient une **valeur par ressource**, saisie dans une **colonne Mastery éditable**
          (après coin/h). Saisie **en pourcentage** (comme l'affichage du jeu ; défaut **5,3 %**, max 100, pas 0,1).
-         `app.js` la convertit en facteur `1 − mastery/100` avant `coinh.js` (param `mastery` = facteur, testé).
+         Elle **s'ajoute au yield du niveau** pour réduire le coût des inputs (voir besoin #13) ; passée **en %** à `coinh.js`.
          Clé localStorage `cw_mastery_pct` (l'ancienne `cw_mastery`, en facteur, est abandonnée).
        - Le **sélecteur de niveau** est en **1re colonne** (tout à gauche) ; il s'applique à la ligne (recalcule
          le coin/h de cette ressource). coin/h n'affiche que la valeur.
        - **Persistance localStorage** (`cw_levels`, `cw_mastery`) : tes niveaux + masteries survivent au rechargement.
          Saisie 100% dans la page, rien à re-déployer.
        - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
-       - Test : `coinh.js` accepte la mastery (facteur), couvert par `test/coinh.test.js`
-         (dont un test ancrant `5,3 % → facteur 0,947`).
+       - Test : `coinh.js` reçoit la mastery **en %** (ajoutée au yield), couvert par `test/coinh.test.js` (cf. besoin #13).
 
 10. [x] **Colonnes variation 24h et 1 semaine** (après le prix).
         - **24h** : `price_change_percentage.h24` (déjà dans le fetch de prix, instantané).
@@ -89,8 +92,8 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Pool.
 
 11. [x] **Réorganisation pour réduire la conso de tokens** (refacto, pas de changement fonctionnel).
-        - `data.json` **minifié** + champ `yield_pct` (inutilisé) retiré + flottants entiers → int :
-          **178 KB → 87 KB (−51 %)**. `build_data.py` produit directement ce format (`separators=(",",":")`).
+        - `data.json` **minifié** + flottants entiers → int : **178 KB → ~96 KB (−44 %)**. `build_data.py`
+          produit ce format (`separators=(",",":")`). NB : `yield_pct` avait été retiré ici puis **restauré au besoin #13** (utile).
         - Le JS d'`index.html` est extrait dans **`app.js`** (`index.html` ne garde que HTML+CSS, ~5 KB) ;
           chargé via `<script src="app.js">`. `coinh.js` reste séparé. Les éditions de logique ne relisent plus le HTML.
         - Vérifié : app charge (34 ressources), 8/8 tests, rendu identique. data.json reste 100 % généré.
@@ -104,3 +107,15 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Test : `coinh.test.js` ancre `39 % → facteur 1,39`. **NB** : les screenshots des valeurs ne parviennent
           pas dans le chat → l'user saisit ses vraies valeurs dans la colonne (mémorisées au rechargement).
         - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Speed bonus | Pool.
+
+13. [x] **Modèle Yield** (réduction du coût des inputs) + cache-bust des scripts.
+        - Le **Yield** du jeu réduit la conso d'inputs. Il cumule deux sources (additif en %) :
+          le **rendement du niveau** (Game Data `yield_pct`, restauré dans `data.json` ; il avait été retiré au #11)
+          + le **bonus Mastery** (la colonne Mastery, en %). → `yield_total = yield_pct + mastery`.
+        - Facteur appliqué à la quantité d'inputs : `yf = yield_pct / (yield_pct + mastery)` (`coinh.js`, fn `yieldFactor`).
+          Si `yield_pct` absent (ressources de base, 50/580 niveaux) → base 100.
+        - **Validé sur le screenshot SCREWS niv 7** : input base 2,85, yield niveau 105,31 %, Mastery 5,49 %
+          → 2,85 × 105,31/110,8 = **2,71** (= l'input affiché par le jeu). `raw_need = input×yield ≈ 3,0` constant par niveau.
+        - `coinh.test.js` ancre ce cas (yield → input 2,71) **et** le speed (durée 15h → 4h57m via ×2×(1+0,52)).
+        - **Cache-bust** : `index.html` charge `coinh.js` puis `app.js` avec `?v=Date.now()` (chargement ordonné) —
+          évite tout décalage de version entre `app.js`, `coinh.js` et `data.json` chez un visiteur en cache.

@@ -41,7 +41,7 @@ function sortRenta(key) {
 
 // ── coin/h ─────────────────────────────────────────────────────────────────────
 let factoryLevel = {};   // ressource → niveau d'usine choisi
-let mastery = {};        // ressource → Mastery en % (réduction des inputs ; défaut 5.3)
+let mastery = {};        // ressource → bonus Mastery en % (s'ajoute au yield du niveau, réduit les inputs ; défaut 5.3)
 let bonusPct = {};       // ressource → Speed bonus de prod en % (défaut = bonus data.json ×100)
 let pricesLoaded = false;
 let dayVar = {};         // pool → variation 24h (%)
@@ -64,9 +64,9 @@ function coinPerHour(name) {
   const r = DATA.resources.find(x => x.name === name);
   if (!r || r.level == null) return null;
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
-  const mFactor = mastery[name] != null ? 1 - mastery[name] / 100 : null;   // Mastery en % → facteur sur les inputs
   const bonus = bonusPct[name] != null ? bonusPct[name] / 100 : (r.bonus || 0);   // Speed bonus en % → fraction
-  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mFactor);
+  // Mastery passée en % : coinh.js l'ajoute au yield du niveau (recipe.yield_pct) pour réduire le coût des inputs.
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mastery[name]);
 }
 
 function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }

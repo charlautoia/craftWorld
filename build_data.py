@@ -115,6 +115,15 @@ def sym(val):
     return s or None
 
 
+def ypct(val):
+    """'105.31%' -> 105.31 (float), sinon None. = rendement du niveau (réduit la conso d'inputs)."""
+    s = str(val or "").strip().replace("%", "").replace(",", "")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 def compact(v):
     """Réduit les flottants entiers en int (3.0 -> 3) pour alléger data.json. None/str inchangés."""
     if isinstance(v, float) and v.is_integer():
@@ -147,6 +156,7 @@ def parse_recipes(rows, single_input=False):
             "input1_amount": in1_amt,
             "input2": in2_sym,
             "input2_amount": in2_amt,
+            "yield_pct": ypct(row.get("YIELD")),   # rendement du niveau ; coin/h : réduit le coût des inputs
             "power": num(row.get("POWER COST")),
             "xp": xp,
         })
@@ -198,7 +208,7 @@ def main():
 
     for levels in crafting.values():       # allège : flottants entiers -> int
         for l in levels:
-            for k in ("output", "input1_amount", "input2_amount", "power", "xp"):
+            for k in ("output", "input1_amount", "input2_amount", "power", "xp", "yield_pct"):
                 l[k] = compact(l[k])
 
     output = {"resources": resources, "crafting": crafting}

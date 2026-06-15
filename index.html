@@ -116,7 +116,19 @@
   </div>
 </div>
 
-<script src="coinh.js"></script>
-<script src="app.js"></script>
+<script>
+  // Cache-bust : coinh.js puis app.js toujours à jour (évite tout décalage de version avec data.json).
+  (function () {
+    var v = '?v=' + Date.now();
+    var s1 = document.createElement('script');
+    s1.src = 'coinh.js' + v;
+    s1.onload = function () {
+      var s2 = document.createElement('script');
+      s2.src = 'app.js' + v;
+      document.body.appendChild(s2);
+    };
+    document.body.appendChild(s1);
+  })();
+</script>
 </body>
 </html>
