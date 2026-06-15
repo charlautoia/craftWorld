@@ -73,3 +73,13 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
          Saisie 100% dans la page, rien à re-déployer.
        - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
        - Test : `coinh.js` accepte la mastery, couvert par `test/coinh.test.js` (7 tests).
+
+10. [x] **Colonnes variation 24h et 1 semaine** (après le prix).
+        - **24h** : `price_change_percentage.h24` (déjà dans le fetch de prix, instantané).
+        - **1 semaine** : non fournie par l'API de prix → 1 appel OHLCV/jour par pool, en **arrière-plan**
+          throttlé (~2,2 s/pool, ~75 s pour les 34, sous le rate-limit). Variation = (close_actuel − close_J-7)/close_J-7.
+        - Format `fmtVar` : `+x,x %` vert / `-x,x %` rouge / `—`. Colonnes triables.
+        - Pools inversées (COPPER) : variation non dérivable → « — ».
+        - L'API n'expose rien au-delà de 24h en immédiat (m5…h24) ; tout horizon ≥ qq jours passe par l'OHLCV
+          (un seul appel/pool ramène tout l'historique : 7j/15j/30j possibles au même coût si besoin un jour).
+        - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Pool.
