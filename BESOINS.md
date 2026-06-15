@@ -119,3 +119,20 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `coinh.test.js` ancre ce cas (yield → input 2,71) **et** le speed (durée 15h → 4h57m via ×2×(1+0,52)).
         - **Cache-bust** : `index.html` charge `coinh.js` puis `app.js` avec `?v=Date.now()` (chargement ordonné) —
           évite tout décalage de version entre `app.js`, `coinh.js` et `data.json` chez un visiteur en cache.
+
+14. [x] **Colonne `coin/kpower`** (après coin/h) = coins par **1000 de power** dépensé.
+        - Formule (Excel onglet `data` col W = `D*B / V`, avec V = `k power` = power/1000) :
+          `coin/kpower = profit_par_cycle × 1000 / power`, où `profit_par_cycle = prix_out×0,975×output − coût_inputs`
+          (même marge que le coin/h, yield inclus) et `power` = coût power du **Game Data officiel** (`recipe.power`).
+        - **Indépendant de la vitesse** (pas de ×2 vidéo ni de durée ni de Speed bonus) : le power est consommé par cycle.
+          Dépend du niveau (output/input/yield/power), de la Mastery et des prix.
+        - `coinh.js` : `profitPerCycle` (factorisée, partagée avec coin/h) + `coinPerKPower`. Colonne triable ;
+          `—` si pas de recette ou power nul. Test : `coinh.test.js` ancre SCREWS niv 7 (0,00866 aux prix de test).
+        - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | coin/kpower | Mastery | Speed bonus | Pool.
+
+15. [x] **Taxe de vente globale configurable.**
+        - Le `×0,975` (part encaissée = 1 − taxe) était hardcodé. Devient un **champ global** « Taxe vente % »
+          (barre de config du tableau Prix ; défaut **2,5 %**), qui s'applique à **coin/h ET coin/kpower**.
+        - `coinh.js` : param `sellFactor` (= 1 − taxe/100 ; défaut 0,975) sur `profitPerCycle` → propagé aux deux calculs.
+          `app.js` : `sellFactor()` = `1 − taxPct/100` ; **persisté** localStorage `cw_tax`.
+        - Test : `coinh.test.js` ancre 0 % / 2,5 % / 5 % (coin/h) et 0 % / 10 % (coin/kpower).

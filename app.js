@@ -1,5 +1,6 @@
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
+let taxPct = 2.5;        // taxe de vente globale en % (configurable) → facteur de vente = 1 − taxPct/100
 let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de data.json), non trié
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['niveau','name','prix_live','d24','w1','coinh','mastery','bonus','pool'].indexOf(key);
+  const thIdx = ['niveau','name','prix_live','d24','w1','coinh','coinkp','mastery','bonus','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -51,6 +52,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Persistance navigateur (les valeurs saisies survivent au rechargement).
 const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
+const LS_TAX = 'cw_tax';   // taxe de vente globale (scalaire)
 function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
 function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
 
@@ -66,8 +68,20 @@ function coinPerHour(name) {
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
   const bonus = bonusPct[name] != null ? bonusPct[name] / 100 : (r.bonus || 0);   // Speed bonus en % → fraction
   // Mastery passée en % : coinh.js l'ajoute au yield du niveau (recipe.yield_pct) pour réduire le coût des inputs.
-  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mastery[name]);
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mastery[name], sellFactor());
 }
+
+// coin/kpower : coins par 1000 de power (indépendant de la vitesse).
+function coinPerKPower(name) {
+  const r = DATA.resources.find(x => x.name === name);
+  if (!r || r.level == null) return null;
+  const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
+  return CoinH.coinPerKPower(recipe, priceByName(name), priceByName, mastery[name], sellFactor());
+}
+
+// Facteur de vente = 1 − taxe/100 (taxe globale configurable).
+function sellFactor() { return 1 - taxPct / 100; }
+function onTaxChange(val) { taxPct = +val; try { localStorage.setItem(LS_TAX, taxPct); } catch (e) {} renderRenta(); }
 
 function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }
 function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
@@ -146,6 +160,14 @@ function coinhCell(r) {
   return `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
 }
 
+// Valeur coin/kpower (coins par 1000 power).
+function coinhkCell(r) {
+  if (r.level == null) return '—';
+  const v = coinPerKPower(r.name);
+  if (v == null) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
+  return `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+}
+
 function renderRenta() {
   const filter = document.getElementById('renta-filter').value.toLowerCase();
   const onlyPool = document.getElementById('only-pool').checked;
@@ -161,6 +183,7 @@ function renderRenta() {
       const k = rentaSort.key;
       const pick = r => k === 'prix_live' ? (livePrice[r.pool] ?? null)
                       : k === 'coinh' ? (coinPerHour(r.name) ?? null)
+                      : k === 'coinkp' ? (coinPerKPower(r.name) ?? null)
                       : k === 'd24' ? (dayVar[r.pool] ?? null)
                       : k === 'w1' ? (weekVar[r.pool] ?? null) : r[k];
       let av = pick(a), bv = pick(b);
@@ -196,6 +219,7 @@ function renderRenta() {
       <td>${dayCell(r)}</td>
       <td>${weekCell(r)}</td>
       <td>${coinhCell(r)}</td>
+      <td>${coinhkCell(r)}</td>
       <td>${masteryCell(r)}</td>
       <td>${bonusCell(r)}</td>
       <td>${poolLink}</td>
@@ -292,6 +316,10 @@ async function init() {
     Object.assign(factoryLevel, loadLS(LS_LEVELS));
     Object.assign(mastery, loadLS(LS_MASTERY));
     Object.assign(bonusPct, loadLS(LS_BONUS));
+    const savedTax = parseFloat(localStorage.getItem(LS_TAX));   // taxe globale persistée
+    if (!isNaN(savedTax)) taxPct = savedTax;
+    const taxInput = document.getElementById('tax-input');
+    if (taxInput) taxInput.value = taxPct;
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');

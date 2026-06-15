@@ -63,6 +63,11 @@
         <input type="checkbox" id="only-pool" onchange="renderRenta()" class="accent-indigo-500">
         Avec pool seulement
       </label>
+      <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe de vente appliquée au prix (coin/h et coin/kpower)">
+        Taxe vente
+        <input type="number" id="tax-input" step="0.1" min="0" max="100" value="2.5"
+               oninput="onTaxChange(this.value)" class="w-16"> %
+      </label>
       <span class="text-slate-500 text-sm" id="renta-count"></span>
     </div>
     <div class="rounded-xl overflow-hidden border border-slate-700">
@@ -76,6 +81,7 @@
               <th onclick="sortRenta('d24')">24h</th>
               <th onclick="sortRenta('w1')">1 sem.</th>
               <th onclick="sortRenta('coinh')">coin/h</th>
+              <th onclick="sortRenta('coinkp')">coin/kpower</th>
               <th>Mastery</th>
               <th>Speed bonus</th>
               <th>Pool</th>

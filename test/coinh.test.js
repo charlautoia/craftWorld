@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -43,6 +43,30 @@ test('Speed : *2 (vidéo) * (1+bonus) Workshop ; durée 15h -> ~4h57m', () => {
   // coin/h sans input : prix_out 1, 15h, bonus 0,52 -> 0,975/15 * 2 * 1,52
   const r = { output: 1, duration: '15:00:00', input1: null, input2: null };
   near(coinPerHour(r, 1, prices({}), 0.52, 0), 0.1976);
+});
+
+// ── coin/kpower (Excel col W = D*B / V, V = power/1000) : coins par 1000 de power, hors vitesse. ──
+test('coin/kpower SCREWS niv 7 = profit_par_cycle * 1000 / power', () => {
+  const recipe = { output: 1, duration: '15:00:00', input1: 'STEEL', input1_amount: 2.85, yield_pct: 105.31, power: 25000 };
+  // profit/cycle = 0,5*0,975*1 - 2,85*yf(105.31,5.49)*0,1 = 0,21662 ; /25000*1000
+  near(profitPerCycle(recipe, 0.5, prices({ STEEL: 0.1 }), 5.49), 0.21662138989169666);
+  near(coinPerKPower(recipe, 0.5, prices({ STEEL: 0.1 }), 5.49), 0.008664855595667867);
+});
+
+test('coin/kpower null si power absent ou nul', () => {
+  const r = { output: 1, duration: '15:00:00', input1: 'STEEL', input1_amount: 2.85, yield_pct: 105.31 };
+  assert.strictEqual(coinPerKPower(r, 0.5, prices({ STEEL: 0.1 }), 5.49), null, 'power absent');
+  assert.strictEqual(coinPerKPower({ ...r, power: 0 }, 0.5, prices({ STEEL: 0.1 }), 5.49), null, 'power nul');
+  assert.strictEqual(coinPerKPower({ ...r, power: 25000 }, null, prices({}), 0), null, 'prix output manquant');
+});
+
+test('taxe de vente configurable (sellFactor = 1 − taxe/100)', () => {
+  const r = { output: 1, duration: '1:00:00', input1: null, input2: null, power: 1000 };
+  near(coinPerHour(r, 10, prices({}), 0, 0, 1.0), 20);     // 0 % taxe : 10*1/1*2 = 20
+  near(coinPerHour(r, 10, prices({}), 0, 0), 19.5);        // défaut 2,5 % : 10*0.975/1*2 = 19.5
+  near(coinPerHour(r, 10, prices({}), 0, 0, 0.95), 19);    // 5 % taxe : 10*0.95/1*2 = 19
+  near(coinPerKPower(r, 10, prices({}), 0, 1.0), 10);      // 0 % : 10*1*1 *1000/1000 = 10
+  near(coinPerKPower(r, 10, prices({}), 0, 0.90), 9);      // 10 % : 10*0.90 *1000/1000 = 9
 });
 
 test('EARTH niv.50 (sans input) — insensible au yield/mastery', () => {
