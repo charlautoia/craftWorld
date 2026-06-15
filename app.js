@@ -33,7 +33,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['niveau','name','prix_live','d24','w1','coinh','mastery','pool'].indexOf(key);
+  const thIdx = ['niveau','name','prix_live','d24','w1','coinh','mastery','bonus','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -42,6 +42,7 @@ function sortRenta(key) {
 // ── coin/h ─────────────────────────────────────────────────────────────────────
 let factoryLevel = {};   // ressource → niveau d'usine choisi
 let mastery = {};        // ressource → Mastery en % (réduction des inputs ; défaut 5.3)
+let bonusPct = {};       // ressource → Speed bonus de prod en % (défaut = bonus data.json ×100)
 let pricesLoaded = false;
 let dayVar = {};         // pool → variation 24h (%)
 let weekVar = {};        // pool → variation 1 semaine (%) ; undefined = en cours
@@ -49,7 +50,7 @@ let weekStarted = false;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Persistance navigateur (les valeurs saisies survivent au rechargement).
-const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct';   // _pct : Mastery en % (ancienne clé = facteur, abandonnée)
+const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
 function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
 function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
 
@@ -64,11 +65,13 @@ function coinPerHour(name) {
   if (!r || r.level == null) return null;
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
   const mFactor = mastery[name] != null ? 1 - mastery[name] / 100 : null;   // Mastery en % → facteur sur les inputs
-  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, r.bonus, mFactor);
+  const bonus = bonusPct[name] != null ? bonusPct[name] / 100 : (r.bonus || 0);   // Speed bonus en % → fraction
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mFactor);
 }
 
 function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }
 function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
+function onBonusChange(name, val) { bonusPct[name] = +val; saveLS(LS_BONUS, bonusPct); renderRenta(); }
 
 // Colonne Mastery : input éditable (uniquement si la recette a au moins un input).
 function masteryCell(r) {
@@ -78,6 +81,15 @@ function masteryCell(r) {
   const v = mastery[r.name] != null ? mastery[r.name] : 5.3;
   return `<input type="number" step="0.1" min="0" max="100" value="${v}"
      onchange="onMasteryChange('${r.name}', this.value)"
+     class="w-16 text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5"> %`;
+}
+
+// Colonne Speed bonus : bonus de prod en % (intervient dans coin/h via ×(1 + bonus)).
+function bonusCell(r) {
+  if (r.level == null) return '—';
+  const v = bonusPct[r.name] != null ? bonusPct[r.name] : (r.bonus || 0) * 100;
+  return `<input type="number" step="0.1" min="0" value="${v}"
+     onchange="onBonusChange('${r.name}', this.value)"
      class="w-16 text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5"> %`;
 }
 
@@ -185,6 +197,7 @@ function renderRenta() {
       <td>${weekCell(r)}</td>
       <td>${coinhCell(r)}</td>
       <td>${masteryCell(r)}</td>
+      <td>${bonusCell(r)}</td>
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
@@ -272,10 +285,13 @@ async function init() {
     const res = await fetch('data.json?v=' + Date.now());   // cache-bust : toujours la dernière version publiée
     DATA = await res.json();
 
-    // Niveau d'usine + Mastery : défauts (niveau actuel ; mastery 5.3 %), puis valeurs sauvegardées.
-    DATA.resources.forEach(r => { if (r.level != null) { factoryLevel[r.name] = r.level; mastery[r.name] = 5.3; } });
+    // Niveau d'usine + Mastery + Speed bonus : défauts, puis valeurs sauvegardées.
+    DATA.resources.forEach(r => { if (r.level != null) {
+      factoryLevel[r.name] = r.level; mastery[r.name] = 5.3; bonusPct[r.name] = (r.bonus || 0) * 100;
+    } });
     Object.assign(factoryLevel, loadLS(LS_LEVELS));
     Object.assign(mastery, loadLS(LS_MASTERY));
+    Object.assign(bonusPct, loadLS(LS_BONUS));
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');

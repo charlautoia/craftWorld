@@ -74,10 +74,11 @@ CURRENT_LEVELS = {
     "HYDROGEN": 5, "DYNAMITE": 5,
 }
 
-# Bonus de production par usine (col "bonus" de l'Excel) ; intervient dans coin/h via (1 + bonus).
+# Speed bonus de production par usine (relevé dans le jeu, écran Workshop) ; coin/h via (1 + bonus).
+# = défaut de la colonne "Speed bonus" (éditable dans l'UI). MAJ quand tu montes une usine.
 BONUS = {
-    "SEAWATER": 0.47, "ALGAE": 0.47, "CERAMICS": 0.39, "STEEL": 0.39, "OXYGEN": 0.39,
-    "GLASS": 0.25, "GAS": 0.25, "FUEL": 0.25, "SCREWS": 0.52, "STONE": 0.09,
+    "SEAWATER": 0.54, "ALGAE": 0.47, "CERAMICS": 0.39, "STEEL": 0.39, "OXYGEN": 0.39,
+    "GAS": 0.25, "FUEL": 0.25, "SCREWS": 0.52, "STONE": 0.09, "HEAT": 0.10, "LAVA": 0.10,
 }
 
 ID_RE = re.compile(r"^(.+)_(\d+)$")

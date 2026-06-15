@@ -94,3 +94,13 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Le JS d'`index.html` est extrait dans **`app.js`** (`index.html` ne garde que HTML+CSS, ~5 KB) ;
           chargé via `<script src="app.js">`. `coinh.js` reste séparé. Les éditions de logique ne relisent plus le HTML.
         - Vérifié : app charge (34 ressources), 8/8 tests, rendu identique. data.json reste 100 % généré.
+
+12. [x] **Colonne Speed bonus** (après Mastery) = le bonus de prod par usine, désormais **éditable**.
+        - C'est le bonus déjà présent dans le coin/h (terme `× (1 + bonus)`), simplement exposé en colonne.
+        - Saisi **en %** (cohérent avec Mastery ; défaut = `bonus` de data.json ×100, **relevé dans le jeu** :
+          SEAWATER 54, SCREWS 52, ALGAE 47, CERAMICS/STEEL/OXYGEN 39, GAS/FUEL 25, HEAT/LAVA 10, STONE 9 ; 0 sinon).
+          `app.js` le reconvertit en fraction `bonus/100` avant `coinh.js` (formule inchangée).
+        - **Persisté** localStorage `cw_bonus_pct` ; éditable pour toute ressource ayant une recette (sinon « — »).
+        - Test : `coinh.test.js` ancre `39 % → facteur 1,39`. **NB** : les screenshots des valeurs ne parviennent
+          pas dans le chat → l'user saisit ses vraies valeurs dans la colonne (mémorisées au rechargement).
+        - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Speed bonus | Pool.
