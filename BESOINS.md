@@ -65,4 +65,11 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - **Test de non-régression** : calcul pur extrait dans `coinh.js` (partagé page + tests) ;
          `test/coinh.test.js` fige la formule (SEAWATER/EARTH/MUD + cas limites). Lancer : `npm test`.
 
-<!-- Prochains besoins à ajouter ici, au fur et à mesure. -->
+9. [x] **Mastery éditable + niveau en 1re colonne + persistance navigateur.**
+       - Le facteur `0,95` des inputs (Mastery du jeu) devient une **valeur par ressource**, saisie dans une
+         **colonne Mastery éditable** (après coin/h ; défaut 0,95). Passée à `coinh.js` (param `mastery`).
+       - Le **sélecteur de niveau** passe en **1re colonne** (tout à gauche) ; coin/h n'affiche plus que la valeur.
+       - **Persistance localStorage** (`cw_levels`, `cw_mastery`) : tes niveaux + masteries survivent au rechargement.
+         Saisie 100% dans la page, rien à re-déployer.
+       - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
+       - Test : `coinh.js` accepte la mastery, couvert par `test/coinh.test.js` (7 tests).

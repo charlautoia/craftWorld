@@ -34,6 +34,14 @@ test('MUD niv.17 (input EARTH)', () => {
   near(coinPerHour(recipe, 0.5, prices({ EARTH: 0.004 }), 0), 4065.5868387096766, 1e-6);
 });
 
+test('mastery personnalisée (remplace le 0.95)', () => {
+  const recipe = { output: 10, duration: '1:00:00', input1: 'A', input1_amount: 4 };
+  // mastery 0.90 : D = 5*0.975 - (4*0.90*1)/10 = 4.875 - 0.36 = 4.515 ; coin/h = 4.515*10/1*2 = 90.3
+  near(coinPerHour(recipe, 5, prices({ A: 1 }), 0, 0.90), 90.3);
+  // mastery par défaut (undefined) = 0.95 : D = 4.875 - (4*0.95*1)/10 = 4.875-0.38=4.495 ; *20 = 89.9
+  near(coinPerHour(recipe, 5, prices({ A: 1 }), 0), 89.9);
+});
+
 test('deux inputs', () => {
   const recipe = { output: 10, duration: '1:00:00', input1: 'A', input1_amount: 4, input2: 'B', input2_amount: 2 };
   // D = 5*0.975 - (4*0.95*1 + 2*0.95*3)/10 = 4.875 - (3.8+5.7)/10 = 4.875-0.95 = 3.925

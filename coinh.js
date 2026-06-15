@@ -17,9 +17,11 @@
   // priceOut : prix COIN de la ressource produite (null/undefined si inconnu)
   // getPrice : (symbol) => prix COIN de l'input (null/undefined si inconnu)
   // bonus : bonus d'usine (0 par défaut)
+  // mastery : facteur appliqué à la quantité d'inputs (Mastery du jeu ; 0.95 par défaut)
   // Retourne le coin/h, ou null si non calculable (recette/prix/durée manquants).
-  function coinPerHour(recipe, priceOut, getPrice, bonus) {
+  function coinPerHour(recipe, priceOut, getPrice, bonus, mastery) {
     if (!recipe) return null;
+    const m = (mastery == null ? 0.95 : mastery);
     const hours = durationHours(recipe.duration);
     const B = recipe.output;
     if (priceOut == null || hours == null || !B) return null;
@@ -29,7 +31,7 @@
       if (sym && amt) {
         const pin = getPrice(sym);
         if (pin == null) return null;       // prix d'un input manquant -> non calculable
-        cost += amt * 0.95 * pin;
+        cost += amt * m * pin;
       }
     }
     const D = priceOut * 0.975 - cost / B;

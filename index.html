@@ -70,9 +70,11 @@
         <table id="renta-table">
           <thead>
             <tr>
+              <th>Niveau</th>
               <th onclick="sortRenta('name')">Ressource</th>
               <th onclick="sortRenta('prix_live')">Prix live (COIN)</th>
               <th onclick="sortRenta('coinh')">coin/h</th>
+              <th>Mastery</th>
               <th>Pool</th>
             </tr>
           </thead>
@@ -141,7 +143,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['name','prix_live','coinh','pool'].indexOf(key);
+  const thIdx = ['niveau','name','prix_live','coinh','mastery','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -149,7 +151,13 @@ function sortRenta(key) {
 
 // ── coin/h ─────────────────────────────────────────────────────────────────────
 let factoryLevel = {};   // ressource → niveau d'usine choisi
+let mastery = {};        // ressource → facteur Mastery sur les inputs (défaut 0.95)
 let pricesLoaded = false;
+
+// Persistance navigateur (les valeurs saisies survivent au rechargement).
+const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery';
+function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
+function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
 
 function priceByName(name) {
   const r = DATA.resources.find(x => x.name === name);
@@ -161,22 +169,38 @@ function coinPerHour(name) {
   const r = DATA.resources.find(x => x.name === name);
   if (!r || r.level == null) return null;
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
-  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, r.bonus);
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, r.bonus, mastery[name]);
 }
 
-function onLevelChange(name, val) { factoryLevel[name] = +val; renderRenta(); }
+function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }
+function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
 
-function coinhCell(r) {
+// Colonne Mastery : input éditable (uniquement si la recette a au moins un input).
+function masteryCell(r) {
+  if (r.level == null) return '—';
+  const recipe = (DATA.crafting[r.name] || []).find(l => l.level === factoryLevel[r.name]);
+  if (!recipe || !recipe.input1) return '—';
+  const v = mastery[r.name] != null ? mastery[r.name] : 0.95;
+  return `<input type="number" step="0.01" min="0" max="1" value="${v}"
+     onchange="onMasteryChange('${r.name}', this.value)"
+     class="w-16 text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">`;
+}
+
+// Sélecteur de niveau d'usine (1re colonne).
+function levelCell(r) {
   if (r.level == null) return '—';            // pas de recette (FIRE/WATER)
   const opts = (DATA.crafting[r.name] || []).map(l =>
     `<option value="${l.level}"${l.level === factoryLevel[r.name] ? ' selected' : ''}>niv ${l.level}</option>`).join('');
-  const sel = `<select onchange="onLevelChange('${r.name}', this.value)"
-       class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5 mr-2">${opts}</select>`;
+  return `<select onchange="onLevelChange('${r.name}', this.value)"
+       class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
+}
+
+// Valeur coin/h seule.
+function coinhCell(r) {
+  if (r.level == null) return '—';
   const v = coinPerHour(r.name);
-  const val = v == null
-    ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
-    : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
-  return `<div class="flex items-center">${sel}${val}</div>`;
+  if (v == null) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
+  return `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
 }
 
 function renderRenta() {
@@ -221,9 +245,11 @@ function renderRenta() {
       : '—';
 
     return `<tr>
+      <td>${levelCell(r)}</td>
       <td class="font-semibold text-white">${r.name ?? '—'}</td>
       <td>${liveCell}</td>
       <td>${coinhCell(r)}</td>
+      <td>${masteryCell(r)}</td>
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
@@ -308,8 +334,10 @@ async function init() {
     const res = await fetch('data.json?v=' + Date.now());   // cache-bust : toujours la dernière version publiée
     DATA = await res.json();
 
-    // Niveau d'usine par défaut (= niveau actuel) pour le calcul coin/h
-    DATA.resources.forEach(r => { if (r.level != null) factoryLevel[r.name] = r.level; });
+    // Niveau d'usine + Mastery : défauts (niveau actuel ; mastery 0.95), puis valeurs sauvegardées.
+    DATA.resources.forEach(r => { if (r.level != null) { factoryLevel[r.name] = r.level; mastery[r.name] = 0.95; } });
+    Object.assign(factoryLevel, loadLS(LS_LEVELS));
+    Object.assign(mastery, loadLS(LS_MASTERY));
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');
