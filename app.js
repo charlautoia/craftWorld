@@ -34,7 +34,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['niveau','name','prix_live','d24','w1','coinh','coinkp','mastery','bonus','pool'].indexOf(key);
+  const thIdx = ['name','coinh','coinkp','prix_live','d24','w1','mastery','bonus','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -143,12 +143,13 @@ async function fetchWeekVars() {
   }
 }
 
-// Sélecteur de niveau d'usine (1re colonne).
-function levelCell(r) {
-  if (r.level == null) return '—';            // pas de recette (FIRE/WATER)
+// Cellule Ressource = nom + niveau fusionnés, format "NAME_niveau" (ID officiel). Niveau éditable inline.
+function resourceCell(r) {
+  const name = `<span class="font-semibold text-white">${r.name ?? '—'}</span>`;
+  if (r.level == null) return name;           // pas de recette (FIRE/WATER) : nom seul
   const opts = (DATA.crafting[r.name] || []).map(l =>
-    `<option value="${l.level}"${l.level === factoryLevel[r.name] ? ' selected' : ''}>niv ${l.level}</option>`).join('');
-  return `<select onchange="onLevelChange('${r.name}', this.value)"
+    `<option value="${l.level}"${l.level === factoryLevel[r.name] ? ' selected' : ''}>${l.level}</option>`).join('');
+  return `${name}<span class="text-slate-500">_</span><select onchange="onLevelChange('${r.name}', this.value)"
        class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
 }
 
@@ -213,13 +214,12 @@ function renderRenta() {
       : '—';
 
     return `<tr>
-      <td>${levelCell(r)}</td>
-      <td class="font-semibold text-white">${r.name ?? '—'}</td>
+      <td>${resourceCell(r)}</td>
+      <td>${coinhCell(r)}</td>
+      <td>${coinhkCell(r)}</td>
       <td>${liveCell}</td>
       <td>${dayCell(r)}</td>
       <td>${weekCell(r)}</td>
-      <td>${coinhCell(r)}</td>
-      <td>${coinhkCell(r)}</td>
       <td>${masteryCell(r)}</td>
       <td>${bonusCell(r)}</td>
       <td>${poolLink}</td>

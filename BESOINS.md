@@ -74,8 +74,8 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
          (après coin/h). Saisie **en pourcentage** (comme l'affichage du jeu ; défaut **5,3 %**, max 100, pas 0,1).
          Elle **s'ajoute au yield du niveau** pour réduire le coût des inputs (voir besoin #13) ; passée **en %** à `coinh.js`.
          Clé localStorage `cw_mastery_pct` (l'ancienne `cw_mastery`, en facteur, est abandonnée).
-       - Le **sélecteur de niveau** est en **1re colonne** (tout à gauche) ; il s'applique à la ligne (recalcule
-         le coin/h de cette ressource). coin/h n'affiche que la valeur.
+       - Le **sélecteur de niveau** (fusionné dans la colonne Ressource au besoin #16 : `NAME_niveau`) recalcule
+         le coin/h de la ligne. coin/h n'affiche que la valeur.
        - **Persistance localStorage** (`cw_levels`, `cw_mastery`) : tes niveaux + masteries survivent au rechargement.
          Saisie 100% dans la page, rien à re-déployer.
        - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
@@ -136,3 +136,11 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `coinh.js` : param `sellFactor` (= 1 − taxe/100 ; défaut 0,975) sur `profitPerCycle` → propagé aux deux calculs.
           `app.js` : `sellFactor()` = `1 − taxPct/100` ; **persisté** localStorage `cw_tax`.
         - Test : `coinh.test.js` ancre 0 % / 2,5 % / 5 % (coin/h) et 0 % / 10 % (coin/kpower).
+
+16. [x] **Refonte de l'en-tête du tableau Prix** (UI, pas de changement de calcul).
+        - Renommages : « Prix live (COIN) » → **coin** ; « coin/kpower » → **coin/kpow**.
+        - **coin/h** et **coin/kpow** déplacés juste après Ressource.
+        - **Niveau fusionné dans Ressource** : la cellule affiche `NAME_niveau` (format ID officiel, ex. `SEAWATER_30`)
+          avec le sélecteur de niveau **inline** (seul l'affichage/recalcul bouge). FIRE/WATER (sans recette) : nom seul.
+        - `app.js` : `resourceCell` (remplace `levelCell`) ; ordre des `<td>` et `thIdx` du tri mis à jour.
+        - Colonnes finales : **Ressource | coin/h | coin/kpow | coin | 24h | 1 sem. | Mastery | Speed bonus | Pool**.
