@@ -81,15 +81,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
        - Colonnes : Niveau | Ressource | Prix live | coin/h | Mastery | Pool.
        - Test : `coinh.js` reçoit la mastery **en %** (ajoutée au yield), couvert par `test/coinh.test.js` (cf. besoin #13).
 
-10. [x] **Colonnes variation 24h et 1 semaine** (après le prix).
-        - **24h** : `price_change_percentage.h24` (déjà dans le fetch de prix, instantané).
-        - **1 semaine** : non fournie par l'API de prix → 1 appel OHLCV/jour par pool, en **arrière-plan**
-          throttlé (~2,2 s/pool, ~75 s pour les 34, sous le rate-limit). Variation = (close_actuel − close_J-7)/close_J-7.
-        - Format `fmtVar` : `+x,x %` vert / `-x,x %` rouge / `—`. Colonnes triables.
+10. [x] **Colonne variation 24h** (après le prix). *(La colonne « 1 semaine » a été retirée — voir besoin #22.)*
+        - **24h** : `price_change_percentage.h24` (déjà dans le fetch de prix, instantané, aucun appel en plus).
+        - Format `fmtVar` : `+x,x %` vert / `-x,x %` rouge / `—`. Triable.
         - Pools inversées (COPPER) : variation non dérivable → « — ».
-        - L'API n'expose rien au-delà de 24h en immédiat (m5…h24) ; tout horizon ≥ qq jours passe par l'OHLCV
-          (un seul appel/pool ramène tout l'historique : 7j/15j/30j possibles au même coût si besoin un jour).
-        - Colonnes finales : Niveau | Ressource | Prix live | 24h | 1 sem. | coin/h | Mastery | Pool.
 
 11. [x] **Réorganisation pour réduire la conso de tokens** (refacto, pas de changement fonctionnel).
         - `data.json` **minifié** + flottants entiers → int : **178 KB → ~96 KB (−44 %)**. `build_data.py`
@@ -143,7 +138,7 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - **Niveau fusionné dans Ressource** : la cellule affiche `NAME_niveau` (format ID officiel, ex. `SEAWATER_30`)
           avec le sélecteur de niveau **inline** (seul l'affichage/recalcul bouge). FIRE/WATER (sans recette) : nom seul.
         - `app.js` : `resourceCell` (remplace `levelCell`) ; ordre des `<td>` et `thIdx` du tri mis à jour.
-        - Colonnes finales : **Ressource | coin/h | coin/kpow | coin | 24h | 1 sem. | Mastery | Speed bonus | Pool**.
+        - Colonnes finales : **Ressource | coin/h | coin/kpow | coin | 24h | Mastery | Speed bonus | Pool** (1 sem. retirée au #22).
 
 17. [x] **Réorganisation des lignes par glisser** (poignée tactile + souris).
         - Poignée **⠿** à gauche de chaque ligne (dans la cellule Ressource). Glisser via **pointer events**
@@ -180,3 +175,9 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           (masquée en vue par ressource via `#crafting-res-th.hidden`, td conditionnel pour l'alignement).
         - Chaque ligne calcule coin/h & coin/kpow avec la Mastery/Speed bonus/taxe de **sa** ressource.
         - Défaut = 1re ressource (vue par ressource inchangée) ; la vue à plat est opt-in.
+
+22. [x] **Suppression de la colonne « 1 semaine »** + tout son code.
+        - Retiré : `<th>1 sem.</th>`, `weekCell`, `fetchWeekVars`, `weekVar`, `weekStarted`, `sleep`, le tri `w1`,
+          le `<td>` et l'appel dans `fetchAllPrices`. (Le besoin #10 ne garde que la variation 24h.)
+        - **Motif** : la variation 1 sem. déclenchait **34 appels OHLCV par refresh** → cause probable des `429`/
+          « Failed to fetch » (rate-limit ~30/min). Le fetch de prix se limite désormais à **2 requêtes** (chunks de 30).

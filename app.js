@@ -36,7 +36,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['name','coinh','coinkp','prix_live','d24','w1','mastery','bonus','pool'].indexOf(key);
+  const thIdx = ['name','coinh','coinkp','prix_live','d24','mastery','bonus','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -48,9 +48,6 @@ let mastery = {};        // ressource → bonus Mastery en % (s'ajoute au yield 
 let bonusPct = {};       // ressource → Speed bonus de prod en % (défaut = bonus data.json ×100)
 let pricesLoaded = false;
 let dayVar = {};         // pool → variation 24h (%)
-let weekVar = {};        // pool → variation 1 semaine (%) ; undefined = en cours
-let weekStarted = false;
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Persistance navigateur (les valeurs saisies survivent au rechargement).
 const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
@@ -110,40 +107,12 @@ function bonusCell(r) {
      class="w-16 text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5"> %`;
 }
 
-// Variations de prix (24h dispo dans le fetch de prix ; 1 semaine via OHLCV en arrière-plan).
+// Variation 24h (déjà fournie par le fetch de prix, aucun appel supplémentaire).
 function dayCell(r) {
   if (!r.pool || r.quote) return '—';
   const v = dayVar[r.pool];
   if (v === undefined) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
   return fmtVar(v);
-}
-function weekCell(r) {
-  if (!r.pool || r.quote) return '—';
-  const v = weekVar[r.pool];
-  if (v === undefined) return '<span class="spin neutral">⟳</span>';   // chargement en arrière-plan
-  return fmtVar(v);
-}
-
-// 1 appel OHLCV/jour par pool (throttlé) ; variation = (close_actuel - close_il_y_a_7j) / close_il_y_a_7j.
-async function fetchWeekVars() {
-  const targets = DATA.resources.filter(r => r.pool && !r.quote);
-  for (const r of targets) {
-    try {
-      const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/ronin/pools/${r.pool}/ohlcv/day?limit=8`, {
-        headers: { 'Accept': 'application/json;version=20230302' }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const list = (await res.json()).data.attributes.ohlcv_list;   // [ts,o,h,l,c,v], plus récent en premier
-      if (list && list.length >= 2) {
-        const cur = list[0][4], old = list[Math.min(7, list.length - 1)][4];
-        weekVar[r.pool] = old ? (cur - old) / old * 100 : null;
-      } else weekVar[r.pool] = null;
-    } catch (e) {
-      weekVar[r.pool] = null;
-    }
-    renderRenta();
-    await sleep(2200);   // throttle anti rate-limit (API gratuite ~30/min)
-  }
 }
 
 // Cellule Ressource = poignée de glissement + nom + niveau fusionnés ("NAME_niveau", ID officiel).
@@ -215,8 +184,7 @@ function renderRenta() {
       const pick = r => k === 'prix_live' ? (livePrice[r.pool] ?? null)
                       : k === 'coinh' ? (coinPerHour(r.name) ?? null)
                       : k === 'coinkp' ? (coinPerKPower(r.name) ?? null)
-                      : k === 'd24' ? (dayVar[r.pool] ?? null)
-                      : k === 'w1' ? (weekVar[r.pool] ?? null) : r[k];
+                      : k === 'd24' ? (dayVar[r.pool] ?? null) : r[k];
       let av = pick(a), bv = pick(b);
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
@@ -254,7 +222,6 @@ function renderRenta() {
       <td>${coinhkCell(r, ckpVals[r.name], ckpRange)}</td>
       <td>${liveCell}</td>
       <td>${dayCell(r)}</td>
-      <td>${weekCell(r)}</td>
       <td>${masteryCell(r)}</td>
       <td>${bonusCell(r)}</td>
       <td>${poolLink}</td>
@@ -418,7 +385,6 @@ async function fetchAllPrices() {
     btn.textContent = '↻ Rafraîchir les prix';
     renderRenta();
     renderCrafting();   // colonnes coin/h & coin/kpow de l'onglet Crafting
-    if (!weekStarted) { weekStarted = true; fetchWeekVars(); }   // variation 1 sem. en arrière-plan (une fois)
   }
 }
 
