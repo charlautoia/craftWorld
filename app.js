@@ -324,31 +324,44 @@ function setupDragReorder() {
 
 // ── Crafting ─────────────────────────────────────────────────────────────────
 function renderCrafting() {
-  const resource = document.getElementById('resource-select').value;
-  const levels = DATA.crafting[resource] || [];
-  document.getElementById('crafting-info').textContent = `${levels.length} niveaux`;
+  const sel = document.getElementById('resource-select').value;
+  const flat = sel === '__all__';                       // vue à plat : toutes les ressources
+  document.getElementById('crafting-res-th').classList.toggle('hidden', !flat);
 
-  // coin/h et coin/kpow par niveau, avec la Mastery / Speed bonus / taxe de la ressource sélectionnée.
-  const r = DATA.resources.find(x => x.name === resource);
-  const bonus = (r && bonusPct[resource] != null) ? bonusPct[resource] / 100 : (r ? (r.bonus || 0) : 0);
-  const m = mastery[resource], sf = sellFactor(), po = priceByName(resource);
+  // entrées à afficher : {name, l} (l = recette d'un niveau).
+  const entries = [];
+  if (flat) DATA.resources.forEach(r => (DATA.crafting[r.name] || []).forEach(l => entries.push({ name: r.name, l })));
+  else (DATA.crafting[sel] || []).forEach(l => entries.push({ name: sel, l }));
+
+  document.getElementById('crafting-info').textContent = flat
+    ? `${entries.length} recettes — ${Object.keys(DATA.crafting).length} ressources`
+    : `${entries.length} niveaux`;
+
+  const sf = sellFactor();
   const coinCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
 
-  document.getElementById('crafting-body').innerHTML = levels.map(l => `<tr>
-    <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
-    <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
-    <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
-    <td class="font-mono">${fmt(l.output, 0)}</td>
-    <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
-    <td class="text-sky-300">${l.input1 ?? '—'}</td>
-    <td class="font-mono">${fmt(l.input1_amount, 2)}</td>
-    <td class="text-sky-300">${l.input2 ?? '—'}</td>
-    <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
-    <td class="text-amber-400">${fmt(l.power, 0)}</td>
-    <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
-  </tr>`).join('');
+  document.getElementById('crafting-body').innerHTML = entries.map(({ name, l }) => {
+    // coin/h et coin/kpow avec la Mastery / Speed bonus / taxe de CETTE ressource.
+    const r = DATA.resources.find(x => x.name === name);
+    const bonus = (r && bonusPct[name] != null) ? bonusPct[name] / 100 : (r ? (r.bonus || 0) : 0);
+    const m = mastery[name], po = priceByName(name);
+    const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
+    return `<tr>
+      ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+      <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
+      <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
+      <td class="font-mono">${fmt(l.output, 0)}</td>
+      <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
+      <td class="text-sky-300">${l.input1 ?? '—'}</td>
+      <td class="font-mono">${fmt(l.input1_amount, 2)}</td>
+      <td class="text-sky-300">${l.input2 ?? '—'}</td>
+      <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
+      <td class="text-amber-400">${fmt(l.power, 0)}</td>
+      <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── GeckoTerminal price fetch (prix en COIN, 1 appel multi-pools) ─────────────
@@ -430,9 +443,11 @@ async function init() {
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');
+    sel.innerHTML = '<option value="__all__">— Toutes (vue à plat) —</option>';
     DATA.resources.forEach(r => {                 // ordre du jeu, recettes uniquement
       if (DATA.crafting[r.name]) sel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
+    sel.selectedIndex = 1;                         // défaut = 1re ressource ; « Toutes » dispo en tête
 
     renderRenta();
     setupDragReorder();

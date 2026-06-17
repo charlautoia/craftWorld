@@ -173,3 +173,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           Mastery / Speed bonus / taxe **de la ressource sélectionnée** (mêmes fonctions `coinh.js` que l'onglet Prix).
         - `renderCrafting` : `priceByName(resource)` en sortie, `priceByName` pour les inputs ; couleur par signe.
           Rafraîchi à l'ouverture de l'onglet (`showTab`) et à l'arrivée des prix (`fetchAllPrices`). Pas de dégradé ici.
+
+21. [x] **Vue à plat de toutes les recettes** (onglet Crafting).
+        - Option **« — Toutes (vue à plat) — »** en tête du sélecteur (`value="__all__"`) : liste **toutes** les recettes
+          de toutes les ressources (580 lignes / 32 ressources) en un tableau, avec une colonne **Ressource** en tête
+          (masquée en vue par ressource via `#crafting-res-th.hidden`, td conditionnel pour l'alignement).
+        - Chaque ligne calcule coin/h & coin/kpow avec la Mastery/Speed bonus/taxe de **sa** ressource.
+        - Défaut = 1re ressource (vue par ressource inchangée) ; la vue à plat est opt-in.
