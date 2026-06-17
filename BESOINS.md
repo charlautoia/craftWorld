@@ -168,7 +168,7 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `app.js` : `heatRange` (min/max hors EARTH) + `heatSpan` ; valeurs précalculées dans `renderRenta`,
           passées à `coinhCell`/`coinhkCell`. Recalculé à chaque rendu (filtre, prix, niveau, taxe). Calcul inchangé (12/12).
 
-20. [x] **Colonnes coin/h et coin/kpow dans l'onglet Crafting.**
+20. [x] **Colonnes coin/h et coin/kpow dans l'onglet Crafting** (placées **juste après Niveau**).
         - Chaque ligne = un **niveau** → coin/h et coin/kpow calculés **par niveau** (recette de la ligne) avec la
           Mastery / Speed bonus / taxe **de la ressource sélectionnée** (mêmes fonctions `coinh.js` que l'onglet Prix).
         - `renderCrafting` : `priceByName(resource)` en sortie, `priceByName` pour les inputs ; couleur par signe.

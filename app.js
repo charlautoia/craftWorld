@@ -338,6 +338,8 @@ function renderCrafting() {
 
   document.getElementById('crafting-body').innerHTML = levels.map(l => `<tr>
     <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+    <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
+    <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
     <td class="font-mono">${fmt(l.output, 0)}</td>
     <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
     <td class="text-sky-300">${l.input1 ?? '—'}</td>
@@ -346,8 +348,6 @@ function renderCrafting() {
     <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
     <td class="text-amber-400">${fmt(l.power, 0)}</td>
     <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
-    <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
-    <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
   </tr>`).join('');
 }
 
