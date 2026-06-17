@@ -26,6 +26,7 @@ function showTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting'));
   });
+  if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
 }
 
 // ── Renta ────────────────────────────────────────────────────────────────────
@@ -327,6 +328,14 @@ function renderCrafting() {
   const levels = DATA.crafting[resource] || [];
   document.getElementById('crafting-info').textContent = `${levels.length} niveaux`;
 
+  // coin/h et coin/kpow par niveau, avec la Mastery / Speed bonus / taxe de la ressource sélectionnée.
+  const r = DATA.resources.find(x => x.name === resource);
+  const bonus = (r && bonusPct[resource] != null) ? bonusPct[resource] / 100 : (r ? (r.bonus || 0) : 0);
+  const m = mastery[resource], sf = sellFactor(), po = priceByName(resource);
+  const coinCell = v => v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
+    : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+
   document.getElementById('crafting-body').innerHTML = levels.map(l => `<tr>
     <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
     <td class="font-mono">${fmt(l.output, 0)}</td>
@@ -337,6 +346,8 @@ function renderCrafting() {
     <td class="font-mono">${fmt(l.input2_amount, 2)}</td>
     <td class="text-amber-400">${fmt(l.power, 0)}</td>
     <td class="text-emerald-400">${fmt(l.xp, 0)}</td>
+    <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
+    <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
   </tr>`).join('');
 }
 
@@ -393,6 +404,7 @@ async function fetchAllPrices() {
     btn.disabled = false;
     btn.textContent = '↻ Rafraîchir les prix';
     renderRenta();
+    renderCrafting();   // colonnes coin/h & coin/kpow de l'onglet Crafting
     if (!weekStarted) { weekStarted = true; fetchWeekVars(); }   // variation 1 sem. en arrière-plan (une fois)
   }
 }
