@@ -65,6 +65,10 @@ INVERTED = {"COPPER"}
 # Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
 ELEMENTS = ["EARTH", "FIRE", "WATER"]
 
+# Ordre d'affichage préféré (choix user) : ces ressources en tête, puis le reste dans l'ordre du Game Data.
+PREFERRED_ORDER = ["EARTH", "MUD", "CLAY", "SAND", "COPPER", "STEEL", "SCREWS", "WATER", "SEAWATER",
+                   "ALGAE", "OXYGEN", "GAS", "FUEL", "OIL", "FIRE", "LAVA", "GLASS", "SULFUR", "FIBERGLASS"]
+
 # Niveau d'usine actuel par ressource (= défaut du sélecteur de niveau dans l'UI ; ta progression).
 CURRENT_LEVELS = {
     "MUD": 17, "CLAY": 16, "SAND": 11, "COPPER": 6, "STEEL": 8, "SCREWS": 7,
@@ -189,9 +193,12 @@ def main():
     included = select_resources(recipe_order)
     crafting = {k: v for k, v in crafting.items() if k in included}
 
-    # Ordre du jeu : EARTH, WATER, FIRE puis le reste dans l'ordre du Game Data (ordre du Sheet).
-    game_order = ["EARTH", "WATER", "FIRE"] + [n for n in recipe_order if n in included]
-    game_order += [n for n in sorted(included) if n not in game_order]   # filet de sécurité
+    # Ordre de base (Game Data) : EARTH, WATER, FIRE puis l'ordre du Sheet.
+    base_order = ["EARTH", "WATER", "FIRE"] + [n for n in recipe_order if n in included]
+    base_order += [n for n in sorted(included) if n not in base_order]   # filet de sécurité
+    # Ordre d'affichage : préférence user en tête, puis le reste dans l'ordre de base.
+    game_order = [n for n in PREFERRED_ORDER if n in included]
+    game_order += [n for n in base_order if n not in game_order]
 
     resources = []
     for n in game_order:

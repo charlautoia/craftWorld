@@ -28,6 +28,9 @@
   td, th { padding: .5rem .75rem; border-bottom: 1px solid #1e293b; font-size: .85rem; }
   th { background: #1e293b; color: #94a3b8; text-transform: uppercase; font-size: .75rem; letter-spacing: .05em; position: sticky; top: 0; z-index: 10; }
   .badge { display: inline-block; padding: .1rem .4rem; border-radius: .25rem; font-size: .7rem; font-weight: 600; }
+  .drag-handle { cursor: grab; touch-action: none; user-select: none; color: #64748b; padding: 0 .35rem 0 0; }
+  .drag-handle:active { cursor: grabbing; color: #818cf8; }
+  tr.dragging td { opacity: .55; background: #334155; }
 </style>
 </head>
 <body class="min-h-screen p-4">
@@ -68,6 +71,8 @@
         <input type="number" id="tax-input" step="0.1" min="0" max="100" value="2.5"
                oninput="onTaxChange(this.value)" class="w-16"> %
       </label>
+      <button onclick="onResetOrder()" class="text-xs text-slate-400 hover:text-slate-200"
+              title="Rétablir l'ordre du jeu">↺ ordre du jeu</button>
       <span class="text-slate-500 text-sm" id="renta-count"></span>
     </div>
     <div class="rounded-xl overflow-hidden border border-slate-700">

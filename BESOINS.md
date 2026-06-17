@@ -144,3 +144,26 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           avec le sélecteur de niveau **inline** (seul l'affichage/recalcul bouge). FIRE/WATER (sans recette) : nom seul.
         - `app.js` : `resourceCell` (remplace `levelCell`) ; ordre des `<td>` et `thIdx` du tri mis à jour.
         - Colonnes finales : **Ressource | coin/h | coin/kpow | coin | 24h | 1 sem. | Mastery | Speed bonus | Pool**.
+
+17. [x] **Réorganisation des lignes par glisser** (poignée tactile + souris).
+        - Poignée **⠿** à gauche de chaque ligne (dans la cellule Ressource). Glisser via **pointer events**
+          (marche au doigt ET à la souris ; `touch-action: none` sur la poignée pour ne pas scroller pendant le drag).
+        - Ordre **persisté** localStorage `cw_order` ; bouton **« ↺ ordre du jeu »** (barre de config) réinitialise.
+        - Après un glisser, l'ordre manuel devient la vue par défaut (`rentaSort.key='game'`). Cliquer un en-tête
+          trie temporairement ; reglisser refige l'ordre courant. Avec un filtre actif, seules les lignes **visibles**
+          sont réordonnées (les masquées gardent leur place — algo de fusion dans `onDragEnd`).
+        - `app.js` : `customOrder` + `orderedResources()` (ordre de base) ; drag via délégation sur `#renta-body`
+          (`setupDragReorder`, `dragAfterElement`, `onDragMove/onDragEnd`) ; `<tr data-name>` pour relire l'ordre.
+          Vérifié en preview (glisser simulé, persistance au rechargement, reset). Logique de calcul inchangée (12/12).
+
+18. [x] **Ordre d'affichage par défaut** (choix user) — remplace l'ordre du besoin #7.
+        - `PREFERRED_ORDER` dans `build_data.py` : EARTH, MUD, CLAY, SAND, COPPER, STEEL, SCREWS, WATER, SEAWATER,
+          ALGAE, OXYGEN, GAS, FUEL, OIL, FIRE, LAVA, GLASS, SULFUR, FIBERGLASS — **puis le reste** (ordre Game Data).
+        - Ordonne `resources` dans `data.json` (appliqué aussi en place). C'est l'ordre **par défaut** ; un ordre manuel
+          (`cw_order`, besoin #17) le surcharge → bouton « ↺ ordre du jeu » pour revenir à ce défaut.
+
+19. [x] **Dégradé rouge→vert sur coin/h et coin/kpow** (heatmap par valeur).
+        - Fond de cellule interpolé `hsla(0→120, …)` = rouge (valeur la plus basse) → vert (la plus haute),
+          plage min/max calculée par colonne sur les lignes **affichées**. **EARTH exclu** de l'échelle (outlier) → sans fond.
+        - `app.js` : `heatRange` (min/max hors EARTH) + `heatSpan` ; valeurs précalculées dans `renderRenta`,
+          passées à `coinhCell`/`coinhkCell`. Recalculé à chaque rendu (filtre, prix, niveau, taxe). Calcul inchangé (12/12).

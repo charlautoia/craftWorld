@@ -1,6 +1,7 @@
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
 let taxPct = 2.5;        // taxe de vente globale en % (configurable) → facteur de vente = 1 − taxPct/100
+let customOrder = null;  // ordre manuel des lignes (array de noms) ; null = ordre du jeu (data.json)
 let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de data.json), non trié
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // Persistance navigateur (les valeurs saisies survivent au rechargement).
 const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
 const LS_TAX = 'cw_tax';   // taxe de vente globale (scalaire)
+const LS_ORDER = 'cw_order';   // ordre manuel des lignes
 function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
 function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
 
@@ -143,43 +145,70 @@ async function fetchWeekVars() {
   }
 }
 
-// Cellule Ressource = nom + niveau fusionnés, format "NAME_niveau" (ID officiel). Niveau éditable inline.
+// Cellule Ressource = poignée de glissement + nom + niveau fusionnés ("NAME_niveau", ID officiel).
 function resourceCell(r) {
+  const grip = `<span class="drag-handle" title="Glisser pour réordonner">⠿</span>`;
   const name = `<span class="font-semibold text-white">${r.name ?? '—'}</span>`;
-  if (r.level == null) return name;           // pas de recette (FIRE/WATER) : nom seul
+  if (r.level == null) return `${grip}${name}`;   // pas de recette (FIRE/WATER) : nom seul
   const opts = (DATA.crafting[r.name] || []).map(l =>
     `<option value="${l.level}"${l.level === factoryLevel[r.name] ? ' selected' : ''}>${l.level}</option>`).join('');
-  return `${name}<span class="text-slate-500">_</span><select onchange="onLevelChange('${r.name}', this.value)"
+  return `${grip}${name}<span class="text-slate-500">_</span><select onchange="onLevelChange('${r.name}', this.value)"
        class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
 }
 
-// Valeur coin/h seule.
-function coinhCell(r) {
-  if (r.level == null) return '—';
-  const v = coinPerHour(r.name);
-  if (v == null) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
-  return `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+// Ordre de base des lignes : ordre manuel (customOrder) si défini, sinon ordre du jeu (data.json).
+function orderedResources() {
+  if (!customOrder) return DATA.resources.slice();
+  const byName = Object.fromEntries(DATA.resources.map(r => [r.name, r]));
+  const out = customOrder.map(n => byName[n]).filter(Boolean);
+  for (const r of DATA.resources) if (!customOrder.includes(r.name)) out.push(r);   // nouveautés en fin
+  return out;
 }
 
-// Valeur coin/kpower (coins par 1000 power).
-function coinhkCell(r) {
+// Rétablit l'ordre du jeu (efface l'ordre manuel).
+function onResetOrder() {
+  customOrder = null;
+  try { localStorage.removeItem(LS_ORDER); } catch (e) {}
+  renderRenta();
+}
+
+// Dégradé rouge→vert d'une valeur dans [range.min, range.max]. EARTH est exclu (outlier).
+const clamp01 = x => Math.max(0, Math.min(1, x));
+function heatRange(rows, vals) {
+  const xs = rows.filter(r => r.name !== 'EARTH' && vals[r.name] != null).map(r => vals[r.name]);
+  return xs.length ? { min: Math.min(...xs), max: Math.max(...xs) } : null;
+}
+function heatSpan(v, range, excluded) {
+  const bg = (excluded || !range || range.max === range.min) ? ''
+    : `background:hsla(${Math.round(clamp01((v - range.min) / (range.max - range.min)) * 120)},60%,42%,0.6);`;
+  return `<span class="font-mono" style="${bg}padding:.1rem .45rem;border-radius:.25rem;color:#f1f5f9">${fmtPrice(v)}</span>`;
+}
+
+// Cellules coin/h et coin/kpow avec dégradé (valeur + plage précalculées dans renderRenta).
+function coinhCell(r, v, range) {
   if (r.level == null) return '—';
-  const v = coinPerKPower(r.name);
+  if (v === undefined) v = coinPerHour(r.name);
   if (v == null) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
-  return `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+  return heatSpan(v, range, r.name === 'EARTH');
+}
+function coinhkCell(r, v, range) {
+  if (r.level == null) return '—';
+  if (v === undefined) v = coinPerKPower(r.name);
+  if (v == null) return pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>';
+  return heatSpan(v, range, r.name === 'EARTH');
 }
 
 function renderRenta() {
   const filter = document.getElementById('renta-filter').value.toLowerCase();
   const onlyPool = document.getElementById('only-pool').checked;
 
-  let rows = DATA.resources.filter(r => {
+  let rows = orderedResources().filter(r => {
     if (filter && !r.name?.toLowerCase().includes(filter)) return false;
     if (onlyPool && !r.pool) return false;
     return true;
   });
 
-  if (rentaSort.key !== 'game') {          // 'game' = on garde l'ordre du jeu de data.json
+  if (rentaSort.key !== 'game') {          // 'game' = ordre manuel (customOrder) ou ordre du jeu (data.json)
     rows.sort((a, b) => {
       const k = rentaSort.key;
       const pick = r => k === 'prix_live' ? (livePrice[r.pool] ?? null)
@@ -198,6 +227,11 @@ function renderRenta() {
 
   document.getElementById('renta-count').textContent = `${rows.length} ressources`;
 
+  // Dégradé rouge→vert de coin/h et coin/kpow : valeurs + plages (EARTH exclu).
+  const chVals = {}, ckpVals = {};
+  rows.forEach(r => { chVals[r.name] = coinPerHour(r.name); ckpVals[r.name] = coinPerKPower(r.name); });
+  const chRange = heatRange(rows, chVals), ckpRange = heatRange(rows, ckpVals);
+
   const tbody = document.getElementById('renta-body');
   tbody.innerHTML = rows.map(r => {
     const live = r.pool ? livePrice[r.pool] : undefined;
@@ -213,10 +247,10 @@ function renderRenta() {
             class="text-indigo-400 hover:underline font-mono text-xs" title="${r.pool}">${shortPool}</a>`
       : '—';
 
-    return `<tr>
+    return `<tr data-name="${r.name}">
       <td>${resourceCell(r)}</td>
-      <td>${coinhCell(r)}</td>
-      <td>${coinhkCell(r)}</td>
+      <td>${coinhCell(r, chVals[r.name], chRange)}</td>
+      <td>${coinhkCell(r, ckpVals[r.name], ckpRange)}</td>
       <td>${liveCell}</td>
       <td>${dayCell(r)}</td>
       <td>${weekCell(r)}</td>
@@ -225,6 +259,66 @@ function renderRenta() {
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Réorganisation des lignes (poignée glisser, tactile + souris) ─────────────
+let dragRow = null;
+
+// Ligne (non glissée) dont le milieu est juste sous le pointeur → on insère avant elle.
+function dragAfterElement(tbody, y) {
+  const els = [...tbody.querySelectorAll('tr:not(.dragging)')];
+  let closest = { offset: -Infinity, el: null };
+  for (const el of els) {
+    const box = el.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) closest = { offset, el };
+  }
+  return closest.el;
+}
+
+function onDragMove(e) {
+  if (!dragRow) return;
+  const tbody = document.getElementById('renta-body');
+  const after = dragAfterElement(tbody, e.clientY);
+  if (after == null) tbody.appendChild(dragRow);
+  else tbody.insertBefore(dragRow, after);
+}
+
+function onDragEnd() {
+  if (!dragRow) return;
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+  dragRow.classList.remove('dragging');
+  dragRow = null;
+
+  // Nouvel ordre : on applique le réordonnancement des lignes VISIBLES sur l'ordre complet
+  // (les lignes masquées par un filtre gardent leur place).
+  const visibleNew = [...document.querySelectorAll('#renta-body tr')].map(tr => tr.dataset.name);
+  const visibleSet = new Set(visibleNew);
+  let vi = 0;
+  customOrder = orderedResources().map(r => visibleSet.has(r.name) ? visibleNew[vi++] : r.name);
+  try { localStorage.setItem(LS_ORDER, JSON.stringify(customOrder)); } catch (_) {}
+
+  rentaSort.key = 'game';   // l'ordre manuel devient la vue par défaut
+  document.querySelectorAll('#renta-table th').forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+  renderRenta();
+}
+
+// Délégation : un seul listener sur le tbody (qui persiste aux re-render).
+function setupDragReorder() {
+  const tbody = document.getElementById('renta-body');
+  tbody.addEventListener('pointerdown', e => {
+    const handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    e.preventDefault();
+    dragRow = handle.closest('tr');
+    dragRow.classList.add('dragging');
+    try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+    document.addEventListener('pointercancel', onDragEnd);
+  });
 }
 
 // ── Crafting ─────────────────────────────────────────────────────────────────
@@ -320,6 +414,7 @@ async function init() {
     if (!isNaN(savedTax)) taxPct = savedTax;
     const taxInput = document.getElementById('tax-input');
     if (taxInput) taxInput.value = taxPct;
+    try { const o = JSON.parse(localStorage.getItem(LS_ORDER)); if (Array.isArray(o)) customOrder = o; } catch (e) {}
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');
@@ -328,6 +423,7 @@ async function init() {
     });
 
     renderRenta();
+    setupDragReorder();
     renderCrafting();
     fetchAllPrices();
   } catch (e) {
