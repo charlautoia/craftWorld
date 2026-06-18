@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -67,6 +67,14 @@ test('taxe de vente configurable (sellFactor = 1 − taxe/100)', () => {
   near(coinPerHour(r, 10, prices({}), 0, 0, 0.95), 19);    // 5 % taxe : 10*0.95/1*2 = 19
   near(coinPerKPower(r, 10, prices({}), 0, 1.0), 10);      // 0 % : 10*1*1 *1000/1000 = 10
   near(coinPerKPower(r, 10, prices({}), 0, 0.90), 9);      // 10 % : 10*0.90 *1000/1000 = 9
+});
+
+test('upgradeCost = cost_amount * prix(cost_symbol)', () => {
+  // MUD_17 : coût COPPER x21 (Excel col R = prix(COPPER)*21).
+  near(upgradeCost({ cost_symbol: 'COPPER', cost_amount: 21 }, prices({ COPPER: 8.33 })), 174.93);
+  assert.strictEqual(upgradeCost({ cost_amount: 21 }, prices({})), null, 'pas de cost_symbol');
+  assert.strictEqual(upgradeCost({ cost_symbol: 'X', cost_amount: 5 }, prices({})), null, 'prix manquant');
+  assert.strictEqual(upgradeCost(null, prices({})), null, 'pas de recette');
 });
 
 test('EARTH niv.50 (sans input) — insensible au yield/mastery', () => {

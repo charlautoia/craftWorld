@@ -317,17 +317,26 @@ function renderCrafting() {
   const coinCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+  const costCell = v => v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
+    : `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
 
+  const sumByRes = {};   // somme cumulée des coûts d'upgrade par ressource (en ordre de niveau)
   document.getElementById('crafting-body').innerHTML = entries.map(({ name, l }) => {
     // coin/h et coin/kpow avec la Mastery / Speed bonus / taxe de CETTE ressource.
     const r = DATA.resources.find(x => x.name === name);
     const bonus = (r && bonusPct[name] != null) ? bonusPct[name] / 100 : (r ? (r.bonus || 0) : 0);
     const m = mastery[name], po = priceByName(name);
+    const uc = CoinH.upgradeCost(l, priceByName);                    // coût d'upgrade vers ce niveau (COIN)
+    if (uc != null) sumByRes[name] = (sumByRes[name] || 0) + uc;     // somme cumulée (ordre de niveau)
+    const us = sumByRes[name] != null ? sumByRes[name] : null;
     const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
     return `<tr>
       ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
       <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
       <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
+      <td>${costCell(uc)}</td>
+      <td>${costCell(us)}</td>
       <td class="font-mono">${fmt(l.output, 0)}</td>
       <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
       <td class="text-sky-300">${l.input1 ?? '—'}</td>

@@ -177,6 +177,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Chaque ligne calcule coin/h & coin/kpow avec la Mastery/Speed bonus/taxe de **sa** ressource.
         - Défaut = vue par ressource (1re ressource) ; la vue à plat est opt-in via le bouton.
 
+23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
+        - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,
+          via `build_data.py` ; mergées dans `data.json` depuis `_recipes.csv`). 530/580 niveaux ont un coût.
+        - **Upgrade Cost** (Excel col R) = `cost_amount × prix(cost_symbol)` (en COIN) ; `coinh.js` fn `upgradeCost`.
+        - **Upgrade Sum** (Excel col S) = somme **cumulée** des Upgrade Cost par ressource (ordre de niveau ;
+          accumulateur `sumByRes` dans `renderCrafting`). Couleur rose (coût). `—` si prix indispo / pas de coût.
+        - Tous les cost_symbol de nos 32 ressources sont prix-disponibles. Test : `upgradeCost` figé (MUD_17 = COPPER×21).
+
 22. [x] **Suppression de la colonne « 1 semaine »** + tout son code.
         - Retiré : `<th>1 sem.</th>`, `weekCell`, `fetchWeekVars`, `weekVar`, `weekStarted`, `sleep`, le tri `w1`,
           le `<td>` et l'appel dans `fetchAllPrices`. (Le besoin #10 ne garde que la variation 24h.)

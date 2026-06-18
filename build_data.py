@@ -163,6 +163,8 @@ def parse_recipes(rows, single_input=False):
             "yield_pct": ypct(row.get("YIELD")),   # rendement du niveau ; coin/h : réduit le coût des inputs
             "power": num(row.get("POWER COST")),
             "xp": xp,
+            "cost_symbol": sym(row.get("COST SYMBOL")),   # coût d'upgrade vers ce niveau (ressource + quantité)
+            "cost_amount": num(row.get("COST AMOUNT")),
         })
     return crafting
 
@@ -215,7 +217,7 @@ def main():
 
     for levels in crafting.values():       # allège : flottants entiers -> int
         for l in levels:
-            for k in ("output", "input1_amount", "input2_amount", "power", "xp", "yield_pct"):
+            for k in ("output", "input1_amount", "input2_amount", "power", "xp", "yield_pct", "cost_amount"):
                 l[k] = compact(l[k])
 
     output = {"resources": resources, "crafting": crafting}

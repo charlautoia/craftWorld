@@ -72,5 +72,13 @@
     return ppc * 1000 / power;
   }
 
-  return { durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower };
+  // Coût d'upgrade (en COIN) pour atteindre ce niveau = cost_amount * prix(cost_symbol).
+  // null si pas de coût défini ou prix du cost_symbol inconnu.
+  function upgradeCost(recipe, getPrice) {
+    if (!recipe || !recipe.cost_symbol || !recipe.cost_amount) return null;
+    const p = getPrice(recipe.cost_symbol);
+    return p == null ? null : recipe.cost_amount * p;
+  }
+
+  return { durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost };
 });
