@@ -290,9 +290,18 @@ function setupDragReorder() {
 }
 
 // ── Crafting ─────────────────────────────────────────────────────────────────
+let craftingFlat = false;   // bouton « À plat » : affiche toutes les recettes
+
+function toggleFlat() {
+  craftingFlat = !craftingFlat;
+  document.getElementById('flat-btn').classList.toggle('active', craftingFlat);
+  document.getElementById('resource-select').disabled = craftingFlat;   // sélecteur inutile en vue à plat
+  renderCrafting();
+}
+
 function renderCrafting() {
+  const flat = craftingFlat;                            // vue à plat : toutes les ressources
   const sel = document.getElementById('resource-select').value;
-  const flat = sel === '__all__';                       // vue à plat : toutes les ressources
   document.getElementById('crafting-res-th').classList.toggle('hidden', !flat);
 
   // entrées à afficher : {name, l} (l = recette d'un niveau).
@@ -409,11 +418,9 @@ async function init() {
 
     // Populate crafting selector
     const sel = document.getElementById('resource-select');
-    sel.innerHTML = '<option value="__all__">— Toutes (vue à plat) —</option>';
     DATA.resources.forEach(r => {                 // ordre du jeu, recettes uniquement
       if (DATA.crafting[r.name]) sel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
-    sel.selectedIndex = 1;                         // défaut = 1re ressource ; « Toutes » dispo en tête
 
     renderRenta();
     setupDragReorder();

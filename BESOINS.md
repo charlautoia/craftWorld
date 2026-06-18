@@ -170,11 +170,12 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           Rafraîchi à l'ouverture de l'onglet (`showTab`) et à l'arrivée des prix (`fetchAllPrices`). Pas de dégradé ici.
 
 21. [x] **Vue à plat de toutes les recettes** (onglet Crafting).
-        - Option **« — Toutes (vue à plat) — »** en tête du sélecteur (`value="__all__"`) : liste **toutes** les recettes
+        - **Bouton « À plat »** (à côté du sélecteur ; état `craftingFlat`, `toggleFlat`) : liste **toutes** les recettes
           de toutes les ressources (580 lignes / 32 ressources) en un tableau, avec une colonne **Ressource** en tête
           (masquée en vue par ressource via `#crafting-res-th.hidden`, td conditionnel pour l'alignement).
+          Bouton actif = surligné, sélecteur désactivé. Re-clic = retour vue par ressource.
         - Chaque ligne calcule coin/h & coin/kpow avec la Mastery/Speed bonus/taxe de **sa** ressource.
-        - Défaut = 1re ressource (vue par ressource inchangée) ; la vue à plat est opt-in.
+        - Défaut = vue par ressource (1re ressource) ; la vue à plat est opt-in via le bouton.
 
 22. [x] **Suppression de la colonne « 1 semaine »** + tout son code.
         - Retiré : `<th>1 sem.</th>`, `weekCell`, `fetchWeekVars`, `weekVar`, `weekStarted`, `sleep`, le tri `w1`,
