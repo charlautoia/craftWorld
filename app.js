@@ -24,11 +24,14 @@ function showTab(tab) {
   document.getElementById('tab-renta').classList.toggle('hidden', tab !== 'renta');
   document.getElementById('tab-crafting').classList.toggle('hidden', tab !== 'crafting');
   document.getElementById('tab-powerplant').classList.toggle('hidden', tab !== 'powerplant');
+  document.getElementById('tab-batteries').classList.toggle('hidden', tab !== 'batteries');
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting') || (i === 2 && tab === 'powerplant'));
+    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting')
+      || (i === 2 && tab === 'powerplant') || (i === 3 && tab === 'batteries'));
   });
   if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
   if (tab === 'powerplant') renderPowerPlant();
+  if (tab === 'batteries') renderBatteries();
 }
 
 // ── Renta ────────────────────────────────────────────────────────────────────
@@ -364,6 +367,22 @@ function ppKpowCell(l) {
   return `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
 }
 
+// Coût d'upgrade (en COIN) d'un niveau de centrale.
+function ppUpCostCell(l) {
+  const v = CoinH.upgradeCost(l, priceByName);
+  if (v == null) return (l.cost_symbol && pricesLoaded) ? '<span class="neutral">—</span>'
+    : (l.cost_symbol ? '<span class="spin neutral">⟳</span>' : '—');
+  return `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
+}
+
+// Efficacité d'upgrade : gain de power/jour (kpow) par kcoin dépensé.
+function ppEfficiencyCell(l, prevPerDay) {
+  const v = CoinH.powerPlantUpgradeEfficiency(l, prevPerDay, priceByName);
+  if (v == null) return (l.cost_symbol && pricesLoaded) ? '<span class="neutral">—</span>'
+    : (l.cost_symbol ? '<span class="spin neutral">⟳</span>' : '—');
+  return `<span class="text-emerald-400 font-mono">${fmt(v, 2)}</span>`;
+}
+
 let powerplantFlat = true;   // vue par défaut : toutes les centrales à plat
 
 function togglePowerPlantFlat() {
@@ -387,11 +406,16 @@ function renderPowerPlant() {
     ? `${entries.length} niveaux — ${Object.keys(DATA.powerplants).length} centrales`
     : `${entries.length} niveaux`;
 
+  const prevPerDayByName = {};   // per_day du niveau précédent, par centrale (0 si 1er niveau)
   document.getElementById('powerplant-body').innerHTML = entries.map(({ name, l }) => {
+    const prevPerDay = prevPerDayByName[name] || 0;
+    prevPerDayByName[name] = l.per_day;
     const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
     return `<tr>
       ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
       <td>${ppKpowCell(l)}</td>
+      <td>${ppUpCostCell(l)}</td>
+      <td>${ppEfficiencyCell(l, prevPerDay)}</td>
       <td class="font-mono">${fmt(l.max_count, 0)}</td>
       <td class="text-amber-400 font-mono">${fmt(l.power, 0)}</td>
       <td class="text-amber-400 font-mono">${fmt(l.per_hour, 0)}</td>
@@ -399,6 +423,63 @@ function renderPowerPlant() {
       <td class="font-mono text-slate-300">${l.cycle_duration ?? '—'}</td>
       <td class="text-sky-300">${l.input ?? '—'}</td>
       <td class="font-mono">${fmt(l.input_amount, 5)}</td>
+      <td class="font-mono text-slate-300">${l.upgrade_duration ?? '—'}</td>
+      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
+      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Batteries ────────────────────────────────────────────────────────────────
+function bUpCostCell(l) {
+  const v = CoinH.upgradeCost(l, priceByName);
+  if (v == null) return (l.cost_symbol && pricesLoaded) ? '<span class="neutral">—</span>'
+    : (l.cost_symbol ? '<span class="spin neutral">⟳</span>' : '—');
+  return `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
+}
+
+// Efficacité d'upgrade : gain de capacité par coin dépensé.
+function bEfficiencyCell(l, prevCapacity) {
+  const v = CoinH.batteryUpgradeEfficiency(l, prevCapacity, priceByName);
+  if (v == null) return (l.cost_symbol && pricesLoaded) ? '<span class="neutral">—</span>'
+    : (l.cost_symbol ? '<span class="spin neutral">⟳</span>' : '—');
+  return `<span class="text-emerald-400 font-mono">${fmt(v, 2)}</span>`;
+}
+
+let batteriesFlat = true;   // vue par défaut : toutes les batteries à plat
+
+function toggleBatteriesFlat() {
+  batteriesFlat = !batteriesFlat;
+  document.getElementById('batteries-flat-btn').classList.toggle('active', batteriesFlat);
+  document.getElementById('batteries-select').disabled = batteriesFlat;   // sélecteur inutile en vue à plat
+  renderBatteries();
+}
+
+function renderBatteries() {
+  const flat = batteriesFlat;
+  const sel = document.getElementById('batteries-select').value;
+  document.getElementById('batteries-res-th').classList.toggle('hidden', !flat);
+
+  // entrées à afficher : {name, l} (l = un niveau de batterie).
+  const entries = [];
+  if (flat) Object.keys(DATA.batteries || {}).forEach(name => (DATA.batteries[name] || []).forEach(l => entries.push({ name, l })));
+  else (DATA.batteries[sel] || []).forEach(l => entries.push({ name: sel, l }));
+
+  document.getElementById('batteries-info').textContent = flat
+    ? `${entries.length} niveaux — ${Object.keys(DATA.batteries || {}).length} batteries`
+    : `${entries.length} niveaux`;
+
+  const prevCapacityByName = {};   // capacity du niveau précédent, par batterie (0 si 1er niveau)
+  document.getElementById('batteries-body').innerHTML = entries.map(({ name, l }) => {
+    const prevCapacity = prevCapacityByName[name] || 0;
+    prevCapacityByName[name] = l.capacity;
+    const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
+    return `<tr>
+      ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+      <td>${bUpCostCell(l)}</td>
+      <td>${bEfficiencyCell(l, prevCapacity)}</td>
+      <td class="font-mono">${fmt(l.max_count, 0)}</td>
+      <td class="text-amber-400 font-mono">${fmt(l.capacity, 0)}</td>
       <td class="font-mono text-slate-300">${l.upgrade_duration ?? '—'}</td>
       <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
       <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
@@ -461,6 +542,7 @@ async function fetchAllPrices() {
     renderRenta();
     renderCrafting();   // colonnes coin/h & coin/kpow de l'onglet Crafting
     renderPowerPlant();   // colonne coin/kpow de l'onglet PowerPlant
+    renderBatteries();   // colonnes UpCost & up capa/coin de l'onglet Batteries
   }
 }
 
@@ -496,10 +578,18 @@ async function init() {
     });
     ppSel.disabled = powerplantFlat;
 
+    // Populate batteries selector (désactivé par défaut : vue à plat)
+    const bSel = document.getElementById('batteries-select');
+    Object.keys(DATA.batteries || {}).forEach(name => {
+      bSel.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+    bSel.disabled = batteriesFlat;
+
     renderRenta();
     setupDragReorder();
     renderCrafting();
     renderPowerPlant();
+    renderBatteries();
     fetchAllPrices();
   } catch (e) {
     document.body.innerHTML += `<div class="fixed bottom-4 right-4 bg-red-900 text-red-200 p-4 rounded-xl text-sm">

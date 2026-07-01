@@ -18,6 +18,7 @@ SHEET_ID = "1HIJtfYQjsf7qXRI1ca8EdZMMmbWzEpf5U1a8IvZ3nRE"
 GID_RECIPES = "1026795583"   # ID, OUTPUT, DURATION, INPUT 1/2 SYMBOL+AMOUNT, YIELD, POWER COST, XP PER OUTPUT...
 GID_BASE = "754695901"       # ressources de base : ID, OUTPUT, DURATION, INPUT SYMBOL+AMOUNT, ... POWER COST
 GID_POWERPLANTS = "360630991"  # centrales : NAME, TOWN HALL LEVEL, MAX COUNT, POWER, PER HOUR/DAY, CYCLE DURATION...
+GID_BATTERIES = "22834069"   # batteries : NAME, TOWN HALL LEVEL, CAPACITY, MAX COUNT, UPGRADE DURATION, COST...
 
 # Mapping ressource -> pool (maintenu à la main : non fourni par le Game Data officiel).
 POOLS = {
@@ -199,6 +200,30 @@ def parse_powerplants(rows):
     return plants
 
 
+def parse_batteries(rows):
+    """Regroupe les lignes ID=NAME_niveau du Game Data Batteries en {name: [niveaux...]}.
+    Deux familles : POWER_CELL et BATTERY (lignes vides entre les deux -> ignorées, pas de match ID_RE)."""
+    batteries = {}
+    for row in rows:
+        rid = (row.get("NAME") or "").strip()
+        m = ID_RE.match(rid)
+        if not m:
+            continue
+        name, level = m.group(1), int(m.group(2))
+        batteries.setdefault(name, []).append({
+            "level": level,
+            "town_hall": num(row.get("TOWN HALL LEVEL")),
+            "capacity": num(row.get("CAPACITY")),
+            "max_count": num(row.get("MAX COUNT")),
+            "upgrade_duration": sym(row.get("UPGRADE DURATION")),
+            "cost_symbol": sym(row.get("COST SYMBOL")),
+            "cost_amount": num(row.get("COST AMOUNT")),
+        })
+    for levels in batteries.values():
+        levels.sort(key=lambda x: x["level"])
+    return batteries
+
+
 def select_resources(recipe_order):
     """Items retenus : factories (début → DYNAMITE inclus) + items (BOLTS → fin) + éléments bruts.
     On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
@@ -257,13 +282,20 @@ def main():
             for k in ("town_hall", "max_count", "power", "per_hour", "per_day", "input_amount", "cost_amount"):
                 l[k] = compact(l[k])
 
-    output = {"resources": resources, "crafting": crafting, "powerplants": powerplants}
+    batteries = parse_batteries(fetch_csv(GID_BATTERIES))
+    for levels in batteries.values():
+        for l in levels:
+            for k in ("town_hall", "capacity", "max_count", "cost_amount"):
+                l[k] = compact(l[k])
+
+    output = {"resources": resources, "crafting": crafting, "powerplants": powerplants, "batteries": batteries}
     with open("data.json", "w", encoding="utf-8") as f:        # minifié : fichier généré, jamais édité à la main
         json.dump(output, f, ensure_ascii=False, separators=(",", ":"))
 
     with_pool = sum(1 for r in resources if r["pool"])
     print(f"data.json généré : {len(resources)} ressources ({with_pool} avec pool), "
-          f"{len(crafting)} ressources avec recette, {len(powerplants)} centrales (PowerPlants).")
+          f"{len(crafting)} ressources avec recette, {len(powerplants)} centrales (PowerPlants), "
+          f"{len(batteries)} batteries.")
 
 
 if __name__ == "__main__":

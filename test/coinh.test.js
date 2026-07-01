@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -101,6 +101,28 @@ test('powerPlantCostPerKPower = input_amount * prix(input) * 1000 / power', () =
   assert.strictEqual(powerPlantCostPerKPower({ power: 111000 }, prices({ HYDROGEN: 100 })), null, 'pas d\'input (AIRSTREAM/SUNFORGE)');
   assert.strictEqual(powerPlantCostPerKPower(level, prices({})), null, 'prix input manquant');
   assert.strictEqual(powerPlantCostPerKPower({ ...level, power: 0 }, prices({ HYDROGEN: 100 })), null, 'power nul');
+});
+
+test('powerPlantUpgradeEfficiency = (per_day - prevPerDay) / upgradeCost', () => {
+  // REACTOR niv.2 (Game Data) : cost 5 ENERGY, per_day passe de 2 664 000 (niv.1) à 5 760 000.
+  const level = { per_day: 5760000, cost_symbol: 'ENERGY', cost_amount: 5 };
+  const uc = 5 * 10;   // prix ENERGY = 10 -> upgradeCost = 50
+  near(powerPlantUpgradeEfficiency(level, 2664000, prices({ ENERGY: 10 })), (5760000 - 2664000) / uc);
+  // 1er niveau (prevPerDay = 0) -> gain = per_day complet.
+  near(powerPlantUpgradeEfficiency({ per_day: 2664000, cost_symbol: 'ENERGY', cost_amount: 1 }, 0, prices({ ENERGY: 10 })), 2664000 / 10);
+  assert.strictEqual(powerPlantUpgradeEfficiency(level, 2664000, prices({})), null, 'prix cost_symbol manquant');
+  assert.strictEqual(powerPlantUpgradeEfficiency({ cost_symbol: 'ENERGY', cost_amount: 5 }, 0, prices({ ENERGY: 10 })), null, 'per_day absent');
+});
+
+test('batteryUpgradeEfficiency = (capacity - prevCapacity) / upgradeCost', () => {
+  // BATTERY niv.2 (Game Data) : cost 1 SCREWS, capacity passe de 12 500 (niv.1) à 35 000.
+  const level = { capacity: 35000, cost_symbol: 'SCREWS', cost_amount: 1 };
+  const uc = 1 * 20;   // prix SCREWS = 20 -> upgradeCost = 20
+  near(batteryUpgradeEfficiency(level, 12500, prices({ SCREWS: 20 })), (35000 - 12500) / uc);
+  // 1er niveau (prevCapacity = 0) -> gain = capacity complète.
+  near(batteryUpgradeEfficiency({ capacity: 12500, cost_symbol: 'STEEL', cost_amount: 1 }, 0, prices({ STEEL: 5 })), 12500 / 5);
+  assert.strictEqual(batteryUpgradeEfficiency(level, 12500, prices({})), null, 'prix cost_symbol manquant');
+  assert.strictEqual(batteryUpgradeEfficiency({ cost_symbol: 'SCREWS', cost_amount: 1 }, 0, prices({ SCREWS: 20 })), null, 'capacity absente');
 });
 
 test('non calculable -> null', () => {

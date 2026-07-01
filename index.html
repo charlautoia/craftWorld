@@ -56,6 +56,7 @@
     <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Prix</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('powerplant')">PowerPlant</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('batteries')">Batteries</button>
   </div>
 
   <!-- ── TAB RENTA ─────────────────────────────────────────────────────────── -->
@@ -151,6 +152,8 @@
               <th id="powerplant-res-th">Centrale</th>
               <th>Niveau</th>
               <th>coin/kpow</th>
+              <th>UpCost</th>
+              <th>up kpow/j/kcoin</th>
               <th>Max</th>
               <th>Power</th>
               <th>Power/h</th>
@@ -164,6 +167,36 @@
             </tr>
           </thead>
           <tbody id="powerplant-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB BATTERIES ─────────────────────────────────────────────────────── -->
+  <div id="tab-batteries" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="batteries-select" onchange="renderBatteries()" class="w-48"></select>
+      <button id="batteries-flat-btn" onclick="toggleBatteriesFlat()"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="batteries-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="batteries-table">
+          <thead>
+            <tr>
+              <th id="batteries-res-th">Batterie</th>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>up capa/coin</th>
+              <th>Max</th>
+              <th>Capacité</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="batteries-body"></tbody>
         </table>
       </div>
     </div>

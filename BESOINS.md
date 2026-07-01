@@ -223,3 +223,30 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           le `<td>` et l'appel dans `fetchAllPrices`. (Le besoin #10 ne garde que la variation 24h.)
         - **Motif** : la variation 1 sem. déclenchait **34 appels OHLCV par refresh** → cause probable des `429`/
           « Failed to fetch » (rate-limit ~30/min). Le fetch de prix se limite désormais à **2 requêtes** (chunks de 30).
+
+26. [x] **Colonnes UpCost et up kpow/j/kcoin** (onglet PowerPlant, après **coin/kpow**).
+        - **UpCost** = coût d'upgrade du niveau en COIN (`cost_amount × prix(cost_symbol)`), réutilise `CoinH.upgradeCost`
+          (déjà utilisée par Up Cost de Crafting, besoin #23). Couleur rose (coût).
+        - **up kpow/j/kcoin** = gain de power/jour apporté par ce niveau (`per_day` − `per_day` du niveau précédent
+          de la même centrale ; niveau 1 → gain = `per_day` complet), divisé par UpCost — un ratio d'efficacité
+          de l'upgrade (kpow/j gagné par kcoin dépensé). `coinh.js` fn `powerPlantUpgradeEfficiency`
+          (testée : REACTOR niv.1→2 figé). Couleur verte (valeur, pas un coût).
+        - `app.js` : `ppUpCostCell`/`ppEfficiencyCell` + accumulateur `prevPerDayByName` dans `renderPowerPlant`
+          (par centrale, ordre de niveau — même pattern que `sumByRes` de Crafting).
+
+27. [x] **Nouvel onglet Batteries** — données de l'onglet **Batteries** du Game Data officiel (`GID_BATTERIES = "22834069"`).
+        - `parse_batteries` (`build_data.py`) : regroupe les lignes `NAME = FAMILLE_niveau` (**POWER_CELL**,
+          **BATTERY** ; lignes vides entre les deux blocs → ignorées) en `data.json.batteries = {FAMILLE: [niveaux...]}`
+          (town_hall, capacity, max_count, upgrade_duration, cost_symbol/cost_amount). Pas de production/power
+          (les batteries stockent, ne produisent pas) → pas d'équivalent coin/h ni coin/kpow ici.
+        - `index.html` : 4e onglet **Batteries** (sélecteur de famille + tableau, même style que PowerPlant),
+          colonnes : Batterie | Niveau | UpCost | up capa/coin | Max | Capacité | Durée upgrade | Coût | Qté coût.
+        - **UpCost** = coût d'upgrade en COIN, réutilise `CoinH.upgradeCost` (comme PowerPlant, besoin #26).
+        - **up capa/coin** = gain de capacité apporté par ce niveau (`capacity` − `capacity` du niveau précédent
+          de la même famille ; niveau 1 → gain = `capacity` complète), divisé par UpCost — ratio d'efficacité
+          de l'upgrade (capacité gagnée par coin dépensé, pas de facteur "kilo" ici contrairement à PowerPlant).
+          `coinh.js` fn `batteryUpgradeEfficiency` (testée : BATTERY niv.1→2 figé).
+        - **Vue à plat par défaut** (`batteriesFlat`/`toggleBatteriesFlat`, actif par défaut), même pattern que
+          PowerPlant (besoin #24) : 25 niveaux / 2 familles affichés d'un coup, bouton « À plat » pour revenir
+          à la vue par famille (sélecteur réactivé).
+        - `python build_data.py` régénère aussi `data.json.batteries` désormais.

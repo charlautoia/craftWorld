@@ -91,5 +91,30 @@
     return level.input_amount * p * 1000 / level.power;
   }
 
-  return { durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost, powerPlantCostPerKPower };
+  // Efficacité d'upgrade d'une centrale : gain de power/jour (en kpow) apporté par ce niveau,
+  // divisé par le coût d'upgrade (en kcoin). Les deux "kilo" s'annulent -> deltaPower / upgradeCost,
+  // mais le nommage garde le sens "kpow/j par kcoin dépensé".
+  // prevPerDay : per_day du niveau précédent de la même centrale (0 si 1er niveau -> gain = per_day complet).
+  // null si coût d'upgrade non calculable ou per_day absent.
+  function powerPlantUpgradeEfficiency(level, prevPerDay, getPrice) {
+    const uc = upgradeCost(level, getPrice);
+    if (uc == null || !uc || !level || level.per_day == null) return null;
+    const deltaPower = level.per_day - (prevPerDay || 0);
+    return deltaPower / uc;
+  }
+
+  // Efficacité d'upgrade d'une batterie : gain de capacité apporté par ce niveau, divisé par le coût d'upgrade (COIN).
+  // prevCapacity : capacity du niveau précédent de la même batterie (0 si 1er niveau -> gain = capacity complète).
+  // null si coût d'upgrade non calculable ou capacity absente.
+  function batteryUpgradeEfficiency(level, prevCapacity, getPrice) {
+    const uc = upgradeCost(level, getPrice);
+    if (uc == null || !uc || !level || level.capacity == null) return null;
+    const deltaCapacity = level.capacity - (prevCapacity || 0);
+    return deltaCapacity / uc;
+  }
+
+  return {
+    durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost,
+    powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency,
+  };
 });
