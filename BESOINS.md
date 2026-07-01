@@ -208,6 +208,9 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           réutilise `fmtVar` (déjà utilisé pour la variation 24h) — vert/+ % si gain, neutre si 0 %.
         - `app.js` : `outputChangeCell`/`durationChangeCell` (nouvelles), `fmtVar` réutilisée pour Δ Prod.
           Positionnées dans `renderCrafting` juste après le `<td>` Output et avant `<td>` Durée (contrainte demandée).
+        - **Colonnes Coût / Qté coût** (juste avant Upgrade Cost) : affichage brut de `cost_symbol`/`cost_amount`
+          (la source de calcul d'Upgrade Cost, jusque-là non affichée telle quelle) — même style que les colonnes
+          Coût/Qté coût de l'onglet PowerPlant (besoin #24).
 
 23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
         - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,

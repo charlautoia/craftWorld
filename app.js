@@ -348,6 +348,8 @@ function renderCrafting() {
       ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
       <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
       <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
+      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
+      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
       <td>${costCell(uc)}</td>
       <td>${costCell(us)}</td>
       <td class="font-mono">${fmt(l.output, 0)}</td>
