@@ -197,6 +197,18 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           « À plat » (`powerplantFlat`/`togglePowerPlantFlat`, actif par défaut) permet de revenir à la
           vue par centrale (sélecteur réactivé). Même pattern que le bouton « À plat » de Crafting (besoin #21).
 
+25. [x] **Colonnes Δ Output / Δ Durée / Δ Prod** (onglet Crafting, juste après **Output**).
+        - Données du Game Data officiel (`OUTPUT CHANGE`, `DURATION CHANGE`, `PRODUCTION CHANGE` — présentes dans
+          les 2 sheets sources, Factories et Mines) = l'amélioration apportée par ce niveau vs le niveau précédent
+          (ce que le jeu affiche à l'écran d'amélioration). Ajoutées à chaque niveau dans `build_data.py`
+          (`parse_recipes`) : `output_change` (nombre), `duration_change` (chaîne "H:MM:SS" **signée**, ex.
+          `-0:05:00` = plus rapide), `production_change_pct` (% de gain de prod/jour, toujours ≥ 0).
+        - **Δ Output** : valeur brute avec signe (`+10`), pas de couleur. **Δ Durée** : couleur **verte** si négatif
+          (durée réduite = amélioration), **rouge** si positif (durée augmentée), neutre si 0. **Δ Prod** :
+          réutilise `fmtVar` (déjà utilisé pour la variation 24h) — vert/+ % si gain, neutre si 0 %.
+        - `app.js` : `outputChangeCell`/`durationChangeCell` (nouvelles), `fmtVar` réutilisée pour Δ Prod.
+          Positionnées dans `renderCrafting` juste après le `<td>` Output et avant `<td>` Durée (contrainte demandée).
+
 23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
         - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,
           via `build_data.py` ; mergées dans `data.json` depuis `_recipes.csv`). 530/580 niveaux ont un coût.
