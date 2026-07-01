@@ -352,6 +352,15 @@ function renderCrafting() {
 }
 
 // ── PowerPlant ───────────────────────────────────────────────────────────────
+// coin/kpow d'une centrale : coût (en COIN) de l'input consommé par 1000 de power produit.
+// N'existe que pour STEAMFORGE (LAVA) et REACTOR (HYDROGEN) ; AIRSTREAM/SUNFORGE n'ont pas d'input -> "—".
+function ppKpowCell(l) {
+  const v = CoinH.powerPlantCostPerKPower(l, priceByName);
+  if (v == null) return (l.input && pricesLoaded) ? '<span class="neutral">—</span>'
+    : (l.input ? '<span class="spin neutral">⟳</span>' : '—');
+  return `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
+}
+
 function renderPowerPlant() {
   const sel = document.getElementById('powerplant-select').value;
   const levels = DATA.powerplants[sel] || [];
@@ -360,7 +369,7 @@ function renderPowerPlant() {
 
   document.getElementById('powerplant-body').innerHTML = levels.map(l => `<tr>
       <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
-      <td class="font-mono">${fmt(l.town_hall, 0)}</td>
+      <td>${ppKpowCell(l)}</td>
       <td class="font-mono">${fmt(l.max_count, 0)}</td>
       <td class="text-amber-400 font-mono">${fmt(l.power, 0)}</td>
       <td class="text-amber-400 font-mono">${fmt(l.per_hour, 0)}</td>
@@ -428,6 +437,7 @@ async function fetchAllPrices() {
     btn.textContent = '↻ Rafraîchir les prix';
     renderRenta();
     renderCrafting();   // colonnes coin/h & coin/kpow de l'onglet Crafting
+    renderPowerPlant();   // colonne coin/kpow de l'onglet PowerPlant
   }
 }
 

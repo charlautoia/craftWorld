@@ -186,6 +186,12 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `app.js` : `renderPowerPlant()` (affichage brut, pas de coin/h ni de coût converti en COIN —
           juste les données du Game Data, contrairement à Crafting) ; sélecteur peuplé dans `init()`.
         - `python build_data.py` régénère aussi `data.json.powerplants` désormais.
+        - **Colonne `coin/kpow`** (remplace **Town Hall**) = coût en COIN de l'input consommé par 1000 de
+          power **produit** (`input_amount × prix(input) × 1000 / power`) — inverse du coin/kpow de Crafting
+          (ici c'est un coût, pas un profit, car les centrales ne produisent pas de ressource vendable).
+          N'existe que pour **STEAMFORGE** (LAVA) et **REACTOR** (HYDROGEN), constant par ressource sur tous
+          les niveaux (même ratio input/power à chaque palier) ; AIRSTREAM/SUNFORGE (pas d'input) → « — ».
+          `coinh.js` fn `powerPlantCostPerKPower` (testée : REACTOR niv.1, 0,01531 HYDROGEN → 111 kpower).
 
 23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
         - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,

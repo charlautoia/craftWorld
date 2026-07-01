@@ -80,5 +80,16 @@
     return p == null ? null : recipe.cost_amount * p;
   }
 
-  return { durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost };
+  // Coût (en COIN) d'une centrale (PowerPlant) par 1000 de power PRODUIT.
+  // level : { input, input_amount, power } (power = power produit par cycle, input = ressource consommée).
+  // Ex. REACTOR niv.1 : 0,01531 HYDROGEN consommé pour 111 000 power (111 kpower) produit.
+  // null si pas d'input (AIRSTREAM/SUNFORGE n'en consomment pas) ou prix de l'input inconnu.
+  function powerPlantCostPerKPower(level, getPrice) {
+    if (!level || !level.input || !level.input_amount || !level.power) return null;
+    const p = getPrice(level.input);
+    if (p == null) return null;
+    return level.input_amount * p * 1000 / level.power;
+  }
+
+  return { durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost, powerPlantCostPerKPower };
 });

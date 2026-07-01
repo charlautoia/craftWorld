@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -92,6 +92,15 @@ test('deux inputs (sans yield ni mastery)', () => {
   const recipe = { output: 10, duration: '1:00:00', input1: 'A', input1_amount: 4, input2: 'B', input2_amount: 2 };
   // D = 5*0.975 - (4*1 + 2*3)/10 = 4.875 - 1 = 3.875 ; coin/h = 3.875*10/1*2 = 77.5
   near(coinPerHour(recipe, 5, prices({ A: 1, B: 3 }), 0, 0), 77.5);
+});
+
+test('powerPlantCostPerKPower = input_amount * prix(input) * 1000 / power', () => {
+  // REACTOR niv.1 (Game Data) : 0,01531 HYDROGEN consommé pour 111 000 power (111 kpower) produit.
+  const level = { input: 'HYDROGEN', input_amount: 0.01531, power: 111000 };
+  near(powerPlantCostPerKPower(level, prices({ HYDROGEN: 100 })), 0.01531 * 100 * 1000 / 111000);
+  assert.strictEqual(powerPlantCostPerKPower({ power: 111000 }, prices({ HYDROGEN: 100 })), null, 'pas d\'input (AIRSTREAM/SUNFORGE)');
+  assert.strictEqual(powerPlantCostPerKPower(level, prices({})), null, 'prix input manquant');
+  assert.strictEqual(powerPlantCostPerKPower({ ...level, power: 0 }, prices({ HYDROGEN: 100 })), null, 'power nul');
 });
 
 test('non calculable -> null', () => {
