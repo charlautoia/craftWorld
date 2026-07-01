@@ -166,10 +166,7 @@ def parse_recipes(rows, single_input=False):
             "xp": xp,
             "cost_symbol": sym(row.get("COST SYMBOL")),   # coût d'upgrade vers ce niveau (ressource + quantité)
             "cost_amount": num(row.get("COST AMOUNT")),
-            # Amélioration apportée par ce niveau (Game Data), vs le niveau précédent :
-            "output_change": num(row.get("OUTPUT CHANGE")),
-            "duration_change": sym(row.get("DURATION CHANGE")),   # "H:MM:SS" signé (ex. "-0:05:00" = plus rapide)
-            "production_change_pct": ypct(row.get("PRODUCTION CHANGE")),   # % de gain de prod/jour
+            "production_change_pct": ypct(row.get("PRODUCTION CHANGE")),   # % de gain de prod/jour vs niveau précédent
         })
     return crafting
 
@@ -251,7 +248,7 @@ def main():
     for levels in crafting.values():       # allège : flottants entiers -> int
         for l in levels:
             for k in ("output", "input1_amount", "input2_amount", "power", "xp", "yield_pct", "cost_amount",
-                       "output_change", "production_change_pct"):
+                       "production_change_pct"):
                 l[k] = compact(l[k])
 
     powerplants = parse_powerplants(fetch_csv(GID_POWERPLANTS))

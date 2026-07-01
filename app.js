@@ -322,17 +322,6 @@ function renderCrafting() {
   const costCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
     : `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
-  // Δ Output : gain d'output par rapport au niveau précédent (Game Data OUTPUT CHANGE).
-  const outputChangeCell = v => v == null ? '—' : `<span class="font-mono">${v > 0 ? '+' : ''}${fmt(v, 0)}</span>`;
-  // Δ Durée : variation de durée par rapport au niveau précédent (Game Data DURATION CHANGE, "H:MM:SS" signé).
-  // Moins de temps = amélioration (vert) ; plus de temps = régression (rouge) ; 0 = neutre.
-  const durationChangeCell = v => {
-    if (v == null) return '—';
-    const s = String(v);
-    if (/^-?0(:00:00)?$/.test(s)) return '<span class="neutral font-mono">0:00:00</span>';
-    const cls = s.startsWith('-') ? 'positive' : 'negative';
-    return `<span class="${cls} font-mono">${s}</span>`;
-  };
 
   const sumByRes = {};   // somme cumulée des coûts d'upgrade par ressource (en ordre de niveau)
   document.getElementById('crafting-body').innerHTML = entries.map(({ name, l }) => {
@@ -348,13 +337,11 @@ function renderCrafting() {
       ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
       <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
       <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
-      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
-      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
       <td>${costCell(uc)}</td>
       <td>${costCell(us)}</td>
+      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
+      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
       <td class="font-mono">${fmt(l.output, 0)}</td>
-      <td>${outputChangeCell(l.output_change)}</td>
-      <td>${durationChangeCell(l.duration_change)}</td>
       <td>${fmtVar(l.production_change_pct)}</td>
       <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
       <td class="text-sky-300">${l.input1 ?? '—'}</td>
