@@ -361,14 +361,33 @@ function ppKpowCell(l) {
   return `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
 }
 
+let powerplantFlat = true;   // vue par défaut : toutes les centrales à plat
+
+function togglePowerPlantFlat() {
+  powerplantFlat = !powerplantFlat;
+  document.getElementById('powerplant-flat-btn').classList.toggle('active', powerplantFlat);
+  document.getElementById('powerplant-select').disabled = powerplantFlat;   // sélecteur inutile en vue à plat
+  renderPowerPlant();
+}
+
 function renderPowerPlant() {
+  const flat = powerplantFlat;
   const sel = document.getElementById('powerplant-select').value;
-  const levels = DATA.powerplants[sel] || [];
+  document.getElementById('powerplant-res-th').classList.toggle('hidden', !flat);
 
-  document.getElementById('powerplant-info').textContent = `${levels.length} niveaux`;
+  // entrées à afficher : {name, l} (l = un niveau de centrale).
+  const entries = [];
+  if (flat) Object.keys(DATA.powerplants).forEach(name => (DATA.powerplants[name] || []).forEach(l => entries.push({ name, l })));
+  else (DATA.powerplants[sel] || []).forEach(l => entries.push({ name: sel, l }));
 
-  document.getElementById('powerplant-body').innerHTML = levels.map(l => `<tr>
-      <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+  document.getElementById('powerplant-info').textContent = flat
+    ? `${entries.length} niveaux — ${Object.keys(DATA.powerplants).length} centrales`
+    : `${entries.length} niveaux`;
+
+  document.getElementById('powerplant-body').innerHTML = entries.map(({ name, l }) => {
+    const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
+    return `<tr>
+      ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
       <td>${ppKpowCell(l)}</td>
       <td class="font-mono">${fmt(l.max_count, 0)}</td>
       <td class="text-amber-400 font-mono">${fmt(l.power, 0)}</td>
@@ -380,7 +399,8 @@ function renderPowerPlant() {
       <td class="font-mono text-slate-300">${l.upgrade_duration ?? '—'}</td>
       <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
       <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 // ── GeckoTerminal price fetch (prix en COIN, 1 appel multi-pools) ─────────────
@@ -466,11 +486,12 @@ async function init() {
       if (DATA.crafting[r.name]) sel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
 
-    // Populate powerplant selector
+    // Populate powerplant selector (désactivé par défaut : vue à plat)
     const ppSel = document.getElementById('powerplant-select');
     Object.keys(DATA.powerplants || {}).forEach(name => {
       ppSel.innerHTML += `<option value="${name}">${name}</option>`;
     });
+    ppSel.disabled = powerplantFlat;
 
     renderRenta();
     setupDragReorder();

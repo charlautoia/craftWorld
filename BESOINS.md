@@ -192,6 +192,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           N'existe que pour **STEAMFORGE** (LAVA) et **REACTOR** (HYDROGEN), constant par ressource sur tous
           les niveaux (même ratio input/power à chaque palier) ; AIRSTREAM/SUNFORGE (pas d'input) → « — ».
           `coinh.js` fn `powerPlantCostPerKPower` (testée : REACTOR niv.1, 0,01531 HYDROGEN → 111 kpower).
+        - **Vue à plat par défaut** (contrairement à Crafting où elle est opt-in) : toutes les centrales
+          (40 niveaux / 4 centrales) affichées d'un coup avec une colonne **Centrale** en tête. Bouton
+          « À plat » (`powerplantFlat`/`togglePowerPlantFlat`, actif par défaut) permet de revenir à la
+          vue par centrale (sélecteur réactivé). Même pattern que le bouton « À plat » de Crafting (besoin #21).
 
 23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
         - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,
