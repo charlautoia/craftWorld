@@ -23,10 +23,12 @@ const fmtVar = v => {
 function showTab(tab) {
   document.getElementById('tab-renta').classList.toggle('hidden', tab !== 'renta');
   document.getElementById('tab-crafting').classList.toggle('hidden', tab !== 'crafting');
+  document.getElementById('tab-powerplant').classList.toggle('hidden', tab !== 'powerplant');
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting'));
+    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting') || (i === 2 && tab === 'powerplant'));
   });
   if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
+  if (tab === 'powerplant') renderPowerPlant();
 }
 
 // ── Renta ────────────────────────────────────────────────────────────────────
@@ -349,6 +351,29 @@ function renderCrafting() {
   }).join('');
 }
 
+// ── PowerPlant ───────────────────────────────────────────────────────────────
+function renderPowerPlant() {
+  const sel = document.getElementById('powerplant-select').value;
+  const levels = DATA.powerplants[sel] || [];
+
+  document.getElementById('powerplant-info').textContent = `${levels.length} niveaux`;
+
+  document.getElementById('powerplant-body').innerHTML = levels.map(l => `<tr>
+      <td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+      <td class="font-mono">${fmt(l.town_hall, 0)}</td>
+      <td class="font-mono">${fmt(l.max_count, 0)}</td>
+      <td class="text-amber-400 font-mono">${fmt(l.power, 0)}</td>
+      <td class="text-amber-400 font-mono">${fmt(l.per_hour, 0)}</td>
+      <td class="text-amber-400 font-mono">${fmt(l.per_day, 0)}</td>
+      <td class="font-mono text-slate-300">${l.cycle_duration ?? '—'}</td>
+      <td class="text-sky-300">${l.input ?? '—'}</td>
+      <td class="font-mono">${fmt(l.input_amount, 5)}</td>
+      <td class="font-mono text-slate-300">${l.upgrade_duration ?? '—'}</td>
+      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
+      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
+    </tr>`).join('');
+}
+
 // ── GeckoTerminal price fetch (prix en COIN, 1 appel multi-pools) ─────────────
 const POOL_API = 'https://api.geckoterminal.com/api/v2/networks/ronin/pools/multi/';
 
@@ -431,9 +456,16 @@ async function init() {
       if (DATA.crafting[r.name]) sel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
 
+    // Populate powerplant selector
+    const ppSel = document.getElementById('powerplant-select');
+    Object.keys(DATA.powerplants || {}).forEach(name => {
+      ppSel.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+
     renderRenta();
     setupDragReorder();
     renderCrafting();
+    renderPowerPlant();
     fetchAllPrices();
   } catch (e) {
     document.body.innerHTML += `<div class="fixed bottom-4 right-4 bg-red-900 text-red-200 p-4 rounded-xl text-sm">

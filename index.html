@@ -55,6 +55,7 @@
   <div class="flex gap-2 mb-4">
     <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Prix</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('powerplant')">PowerPlant</button>
   </div>
 
   <!-- ── TAB RENTA ─────────────────────────────────────────────────────────── -->
@@ -126,6 +127,37 @@
             </tr>
           </thead>
           <tbody id="crafting-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB POWERPLANT ────────────────────────────────────────────────────── -->
+  <div id="tab-powerplant" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="powerplant-select" onchange="renderPowerPlant()" class="w-48"></select>
+      <span class="text-slate-500 text-sm" id="powerplant-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="powerplant-table">
+          <thead>
+            <tr>
+              <th>Niveau</th>
+              <th>Town Hall</th>
+              <th>Max</th>
+              <th>Power</th>
+              <th>Power/h</th>
+              <th>Power/j</th>
+              <th>Durée cycle</th>
+              <th>Input</th>
+              <th>Qté input</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="powerplant-body"></tbody>
         </table>
       </div>
     </div>

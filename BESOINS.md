@@ -177,6 +177,16 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Chaque ligne calcule coin/h & coin/kpow avec la Mastery/Speed bonus/taxe de **sa** ressource.
         - Défaut = vue par ressource (1re ressource) ; la vue à plat est opt-in via le bouton.
 
+24. [x] **Nouvel onglet PowerPlant** — données de l'onglet **PowerPlants** du Game Data officiel.
+        - Nouveau tab Sheet (`GID_POWERPLANTS = "360630991"`), parsé par `parse_powerplants` (`build_data.py`) :
+          regroupe les lignes `ID = NAME_niveau` (AIRSTREAM, SUNFORGE, STEAMFORGE, REACTOR) en
+          `data.json.powerplants = {NAME: [niveaux...]}` (town_hall, max_count, power, per_hour, per_day,
+          cycle_duration, input/input_amount, upgrade_duration, cost_symbol/cost_amount).
+        - `index.html` : 3e onglet **PowerPlant** (sélecteur de centrale + tableau, même style que Crafting).
+        - `app.js` : `renderPowerPlant()` (affichage brut, pas de coin/h ni de coût converti en COIN —
+          juste les données du Game Data, contrairement à Crafting) ; sélecteur peuplé dans `init()`.
+        - `python build_data.py` régénère aussi `data.json.powerplants` désormais.
+
 23. [x] **Colonnes Upgrade Cost et Upgrade Sum** (onglet Crafting, après coin/kpow).
         - Données : `cost_symbol` + `cost_amount` ajoutés à chaque recette (Game Data `COST SYMBOL`/`COST AMOUNT`,
           via `build_data.py` ; mergées dans `data.json` depuis `_recipes.csv`). 530/580 niveaux ont un coût.
