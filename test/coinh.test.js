@@ -247,3 +247,32 @@ test('chainMetrics : null si prix manquant, matière brute ou recette circulaire
   };
   assert.strictEqual(chainMetrics('X', mkCtx(loop, { X: 5, Y: 5 })), null, 'recettes circulaires');
 });
+
+test('chainMetrics.directCost = inputs de la seule usine, achetés au marché', () => {
+  // A (acheté) -> M -> F. Pour F : 3 M au prix du marché (50), contre 66 en le produisant soi-même.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 3, power: 2000 },
+  };
+  const ctx = mkCtx(recipes, { A: 10, M: 50, F: 100 }, { buyFactor: 1.1 });
+  const f = chainMetrics('F', ctx);
+  near(f.directCost, 3 * 50 * 1.1);            // 165 : acheter les 3 M au marché
+  near(f.cost, 3 * 2 * 10 * 1.1);              // 66  : les produire depuis A -> nettement moins cher
+  // Une étape dont les inputs sont déjà achetés : les deux coûts coïncident.
+  const m = chainMetrics('M', ctx);
+  near(m.directCost, m.cost);
+  // Recette à 2 inputs : les deux branches sont achetées au marché.
+  const two = { F: { output: 2, duration: '1:00:00', input1: 'A', input1_amount: 2, input2: 'B', input2_amount: 4, power: 1 } };
+  near(chainMetrics('F', mkCtx(two, { A: 10, B: 5, F: 100 })).directCost, (2 * 10 + 4 * 5) / 2);
+});
+
+test('chainMetrics.directCost = null si prix d\'un input manquant', () => {
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 3, power: 2000 },
+  };
+  // M n'a pas de prix : la chaîne reste calculable (M est produit), mais directCost non.
+  const f = chainMetrics('F', mkCtx(recipes, { A: 10, F: 100 }));
+  assert.strictEqual(f.directCost, null);
+  near(f.cost, 3 * 2 * 10);
+});

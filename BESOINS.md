@@ -297,3 +297,16 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           boutons « À plat » (même classe) → ils perdaient leur surlignage à chaque changement d'onglet alors
           que le mode à plat restait actif. Le conteneur de navigation a désormais `id="tabs"` et le sélecteur
           est `#tabs .tab-btn`.
+
+30. [x] **Colonne « Coût inputs »** (onglet Chaînes, juste après **Coût mat.**).
+        - = coût des inputs de **cette usine seule**, achetés au marché (taxe d'achat comprise), par unité
+          produite — quantités yield/Mastery-ajustées comme partout ailleurs.
+        - À comparer à **Coût mat.** (coût cumulé des matières de base en remontant toute la chaîne) :
+          si « Coût inputs » est plus cher, produire l'intermédiaire soi-même est rentable.
+        - `coinh.js` : `directInputCost(name, ctx)` (non récursif, contrairement à `chainNode`), exposée
+          via `chainMetrics().directCost`. `null` si la recette n'a aucun input ou si un prix manque —
+          une chaîne peut rester calculable alors que `directCost` ne l'est pas (l'intermédiaire produit
+          n'a pas besoin d'un prix de marché, l'acheter si).
+        - Contrôles : SEAWATER affiche deux coûts **identiques** (son input WATER est déjà acheté) ;
+          les chaînes issues d'EARTH ont **Coût mat. = 0** car EARTH est une recette **sans input**
+          (extraite de rien, power 7) — leur seul coût réel est le power.

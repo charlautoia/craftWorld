@@ -157,6 +157,25 @@
     return (memo[name] = { cost, power, rate, bottleneck, raw: false });
   }
 
+  // Coût des inputs de la SEULE usine `name`, achetés au marché (taxe d'achat comprise), par unité produite.
+  // À comparer au coût matières de la chaîne : si c'est plus cher, produire l'intermédiaire soi-même paie.
+  // null si la recette n'a aucun input ou si un prix manque.
+  function directInputCost(name, ctx) {
+    const recipe = ctx.recipeOf(name);
+    if (!recipe || !recipe.output) return null;
+    const yf = yieldFactor(recipe.yield_pct, ctx.masteryOf(name));
+    let cost = 0, has = false;
+    const inputs = [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]];
+    for (const [symb, amt] of inputs) {
+      if (!symb || !amt) continue;
+      const p = ctx.priceOf(symb);
+      if (p == null) return null;
+      cost += amt * yf / recipe.output * p * ctx.buyFactor;
+      has = true;
+    }
+    return has ? cost : null;
+  }
+
   // Rentabilité de la chaîne complète menant à `name` (voir chainNode).
   // coinH = marge * débit de la chaîne (bridé par le goulot) ; coinKPow = marge par 1000 de power cumulé.
   // Retourne null si `name` n'a pas de recette ou si un prix de la chaîne manque.
@@ -168,6 +187,7 @@
     const margin = p * ctx.sellFactor - n.cost;
     return {
       cost: n.cost,                                     // coût cumulé des matières achetées, par unité
+      directCost: directInputCost(name, ctx),           // coût des inputs de cette usine seule, achetés
       power: n.power,                                   // power cumulé de toute la chaîne, par unité
       rate: n.rate,                                     // unités/h (1 usine par étape, bridé par le goulot)
       bottleneck: n.bottleneck,                         // étape qui bride la chaîne

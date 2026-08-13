@@ -638,7 +638,7 @@ function renderChains() {
     if (!m) return `<tr>
       <td class="font-semibold text-white">${name}</td>
       <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
-      <td colspan="9" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
+      <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
     // Goulot : rouge si c'est l'usine de la ligne elle-même, sinon c'est une étape amont.
     const gl = m.bottleneck === name
@@ -651,6 +651,7 @@ function renderChains() {
       <td>${signCell(m.coinKPow)}</td>
       <td>${signCell(m.margin)}</td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.cost)}</span></td>
+      <td><span class="text-rose-300 font-mono">${fmtPrice(m.directCost)}</span></td>
       <td><span class="text-amber-300 font-mono">${fmtPrice(priceByName(name))}</span></td>
       <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
       <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
