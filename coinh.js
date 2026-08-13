@@ -119,8 +119,66 @@
     return deltaCapacity / uc;
   }
 
+  // ── Chaîne de production ────────────────────────────────────────────────────
+  // Remonte l'arbre des recettes depuis `name` jusqu'aux ressources sans recette (achetées au marché),
+  // et cumule coût matières / power / débit. Les intermédiaires ne transitent pas par le marché :
+  // seules les feuilles sont achetées (buyFactor) et seul `name` est vendu (sellFactor).
+  // Les recettes à 2 inputs font de la chaîne un ARBRE, pas une ligne (24 recettes concernées).
+  // ctx = { recipeOf(name)->recette|null, priceOf(name)->prix|null, masteryOf(name)->%,
+  //         speedOf(name)->fraction (Speed bonus Workshop), buyFactor, sellFactor }
+  // Retourne { cost, power, rate, bottleneck } par unité produite, ou null si non calculable.
+  function chainNode(name, ctx, memo, stack) {
+    if (memo[name] !== undefined) return memo[name];
+    if (stack.indexOf(name) >= 0) return null;          // garde-fou : recettes circulaires
+    const recipe = ctx.recipeOf(name);
+    if (!recipe) {                                      // pas de recette -> matière achetée (feuille)
+      const p = ctx.priceOf(name);
+      const leaf = p == null ? null
+        : { cost: p * ctx.buyFactor, power: 0, rate: Infinity, bottleneck: null, raw: true };
+      return (memo[name] = leaf);
+    }
+    const B = recipe.output, hrs = durationHours(recipe.duration);
+    if (!B || hrs == null) return (memo[name] = null);
+    const yf = yieldFactor(recipe.yield_pct, ctx.masteryOf(name));
+    let cost = 0, power = (recipe.power || 0) / B;
+    let rate = B / (hrs / (2 * (1 + (ctx.speedOf(name) || 0))));   // débit de CETTE usine (bonus vidéo *2)
+    let bottleneck = name;
+    const inputs = [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]];
+    for (const [symb, amt] of inputs) {
+      if (!symb || !amt) continue;
+      const per = amt * yf / B;                         // quantité d'input par unité produite
+      const sub = chainNode(symb, ctx, memo, stack.concat(name));
+      if (!sub) return (memo[name] = null);
+      cost += per * sub.cost;
+      power += per * sub.power;
+      const upstream = sub.rate / per;                  // débit amont converti en unités de `name`
+      if (upstream < rate) { rate = upstream; bottleneck = sub.bottleneck; }
+    }
+    return (memo[name] = { cost, power, rate, bottleneck, raw: false });
+  }
+
+  // Rentabilité de la chaîne complète menant à `name` (voir chainNode).
+  // coinH = marge * débit de la chaîne (bridé par le goulot) ; coinKPow = marge par 1000 de power cumulé.
+  // Retourne null si `name` n'a pas de recette ou si un prix de la chaîne manque.
+  function chainMetrics(name, ctx) {
+    const n = chainNode(name, ctx, {}, []);
+    if (!n || n.raw) return null;
+    const p = ctx.priceOf(name);
+    if (p == null) return null;
+    const margin = p * ctx.sellFactor - n.cost;
+    return {
+      cost: n.cost,                                     // coût cumulé des matières achetées, par unité
+      power: n.power,                                   // power cumulé de toute la chaîne, par unité
+      rate: n.rate,                                     // unités/h (1 usine par étape, bridé par le goulot)
+      bottleneck: n.bottleneck,                         // étape qui bride la chaîne
+      margin,
+      coinH: margin * n.rate,
+      coinKPow: n.power ? margin * 1000 / n.power : null,
+    };
+  }
+
   return {
     durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost,
-    powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency,
+    powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics,
   };
 });

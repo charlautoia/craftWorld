@@ -1,7 +1,7 @@
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
-let taxPct = 2.5;        // taxe de vente globale en % (configurable) → facteur de vente = 1 − taxPct/100
-let buyTaxPct = 2.5;     // taxe d'achat globale en % (configurable) → facteur d'achat = 1 + buyTaxPct/100
+let taxPct = 3.5;        // taxe de vente globale en % (configurable) → facteur de vente = 1 − taxPct/100
+let buyTaxPct = 3.5;     // taxe d'achat globale en % (configurable) → facteur d'achat = 1 + buyTaxPct/100
 let customOrder = null;  // ordre manuel des lignes (array de noms) ; null = ordre du jeu (data.json)
 let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de data.json), non trié
 
@@ -26,13 +26,14 @@ function showTab(tab) {
   document.getElementById('tab-crafting').classList.toggle('hidden', tab !== 'crafting');
   document.getElementById('tab-powerplant').classList.toggle('hidden', tab !== 'powerplant');
   document.getElementById('tab-batteries').classList.toggle('hidden', tab !== 'batteries');
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && tab === 'renta') || (i === 1 && tab === 'crafting')
-      || (i === 2 && tab === 'powerplant') || (i === 3 && tab === 'batteries'));
-  });
+  document.getElementById('tab-chains').classList.toggle('hidden', tab !== 'chains');
+  // #tabs : uniquement les onglets de navigation (les boutons « À plat » portent aussi .tab-btn).
+  const order = ['renta', 'crafting', 'powerplant', 'batteries', 'chains'];
+  document.querySelectorAll('#tabs .tab-btn').forEach((b, i) => b.classList.toggle('active', order[i] === tab));
   if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
   if (tab === 'powerplant') renderPowerPlant();
   if (tab === 'batteries') renderBatteries();
+  if (tab === 'chains') renderChains();
 }
 
 // ── Renta ────────────────────────────────────────────────────────────────────
@@ -574,7 +575,89 @@ async function fetchAllPrices() {
     renderCrafting();   // colonnes coin/h & coin/kpow de l'onglet Crafting
     renderPowerPlant();   // colonne coin/kpow de l'onglet PowerPlant
     renderBatteries();   // colonnes UpCost & up capa/coin de l'onglet Batteries
+    renderChains();      // rentabilité de chaîne (dépend des prix live)
   }
+}
+
+// ── Chaînes ──────────────────────────────────────────────────────────────────
+let chainsFlat = true;      // vue à plat par défaut (comme PowerPlant/Batteries)
+
+// Contexte passé à CoinH.chainMetrics : recettes au niveau choisi, prix live, Mastery/Speed bonus, taxes.
+function chainCtx() {
+  return {
+    recipeOf: n => (DATA.crafting[n] || []).find(l => l.level === factoryLevel[n]) || null,
+    priceOf: priceByName,
+    masteryOf: n => mastery[n],
+    speedOf: n => {
+      const r = DATA.resources.find(x => x.name === n);
+      return (r && bonusPct[n] != null) ? bonusPct[n] / 100 : (r ? (r.bonus || 0) : 0);
+    },
+    buyFactor: 1 + buyTaxPct / 100,
+    sellFactor: 1 - taxPct / 100,
+  };
+}
+
+// Étapes de production de la chaîne de `name`, amont d'abord (les matières achetées n'en sont pas).
+function chainSteps(name, ctx, seen, stack) {
+  seen = seen || []; stack = stack || [];
+  if (seen.indexOf(name) >= 0 || stack.indexOf(name) >= 0) return seen;
+  const recipe = ctx.recipeOf(name);
+  if (!recipe) return seen;                     // matière sans recette : achetée, pas une étape
+  for (const s of [recipe.input1, recipe.input2]) if (s) chainSteps(s, ctx, seen, stack.concat(name));
+  seen.push(name);
+  return seen;
+}
+
+function toggleChainsFlat() {
+  chainsFlat = !chainsFlat;
+  document.getElementById('chains-flat-btn').classList.toggle('active', chainsFlat);
+  document.getElementById('chains-select').disabled = chainsFlat;
+  renderChains();
+}
+
+function renderChains() {
+  const ctx = chainCtx();
+  const sel = document.getElementById('chains-select').value;
+  // Vue à plat : toutes les ressources produisibles. Sinon : les étapes de la chaîne choisie (amont d'abord).
+  const names = chainsFlat
+    ? DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name)
+    : chainSteps(sel, ctx);
+
+  document.getElementById('chains-info').textContent = chainsFlat
+    ? `${names.length} ressources`
+    : `${names.length} étapes jusqu'à ${sel}`;
+
+  const wait = '<span class="spin neutral">⟳</span>';
+  const signCell = v => v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
+    : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+
+  document.getElementById('chains-body').innerHTML = names.map(name => {
+    const m = CoinH.chainMetrics(name, ctx);
+    const steps = chainSteps(name, ctx).length;
+    if (!m) return `<tr>
+      <td class="font-semibold text-white">${name}</td>
+      <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td colspan="9" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
+    </tr>`;
+    // Goulot : rouge si c'est l'usine de la ligne elle-même, sinon c'est une étape amont.
+    const gl = m.bottleneck === name
+      ? `<span class="text-rose-300">${m.bottleneck}</span>`
+      : `<span class="text-slate-400">${m.bottleneck ?? '—'}</span>`;
+    return `<tr>
+      <td class="font-semibold text-white">${name}</td>
+      <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td>${signCell(m.coinH)}</td>
+      <td>${signCell(m.coinKPow)}</td>
+      <td>${signCell(m.margin)}</td>
+      <td><span class="text-rose-300 font-mono">${fmtPrice(m.cost)}</span></td>
+      <td><span class="text-amber-300 font-mono">${fmtPrice(priceByName(name))}</span></td>
+      <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
+      <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
+      <td>${gl}</td>
+      <td class="font-mono text-slate-400">${steps}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -627,11 +710,19 @@ async function init() {
     });
     bSel.disabled = batteriesFlat;
 
+    // Populate chains selector (désactivé par défaut : vue à plat) — ressources produisibles
+    const cSel = document.getElementById('chains-select');
+    DATA.resources.forEach(r => {
+      if (DATA.crafting[r.name]) cSel.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    });
+    cSel.disabled = chainsFlat;
+
     renderRenta();
     setupDragReorder();
     renderCrafting();
     renderPowerPlant();
     renderBatteries();
+    renderChains();
     fetchAllPrices();
   } catch (e) {
     document.body.innerHTML += `<div class="fixed bottom-4 right-4 bg-red-900 text-red-200 p-4 rounded-xl text-sm">

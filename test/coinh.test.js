@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -170,4 +170,80 @@ test('buyFactor se propage à coinPerHour et coinPerKPower', () => {
 test('taxe d\'achat sans input : aucun effet (rien à acheter)', () => {
   const r = { output: 1, duration: '15:00:00', input1: null, input2: null };
   near(coinPerHour(r, 1, prices({}), 0.52, 0, 0.975, 1.025), 0.1976);
+});
+
+// ── Chaîne de production (besoin #29) ───────────────────────────────────────────
+// ctx minimal : recettes/prix/mastery/speed fournis par des tables.
+const mkCtx = (recipes, px, opts = {}) => ({
+  recipeOf: n => recipes[n] || null,
+  priceOf: n => (n in px ? px[n] : null),
+  masteryOf: () => opts.mastery ?? 0,
+  speedOf: n => (opts.speed || {})[n] || 0,
+  buyFactor: opts.buyFactor ?? 1,
+  sellFactor: opts.sellFactor ?? 1,
+});
+
+test('chainMetrics : chaîne à 1 étape = coût matière achetée + power de l\'étape', () => {
+  // 2 A (achetés) -> 1 B par cycle de 1h. A = 10, B = 30. Taxes : achat +10 %, vente −10 %.
+  const recipes = { B: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 5000 } };
+  const m = chainMetrics('B', mkCtx(recipes, { A: 10, B: 30 }, { buyFactor: 1.1, sellFactor: 0.9 }));
+  near(m.cost, 2 * 10 * 1.1);                  // 22 : les matières de base subissent la taxe d'achat
+  near(m.power, 5000);
+  near(m.margin, 30 * 0.9 - 22);               // 5
+  near(m.rate, 2);                             // 1 unité / 1h, ×2 (bonus vidéo)
+  near(m.coinH, 5 * 2);
+  near(m.coinKPow, 5 * 1000 / 5000);
+  assert.strictEqual(m.bottleneck, 'B');       // seule usine de la chaîne
+});
+
+test('chainMetrics : l\'intermédiaire n\'est ni acheté ni vendu (aucune taxe dessus)', () => {
+  // A (acheté) -> M -> F (vendu). Le prix de M ne doit PAS entrer dans le calcul.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 3, power: 2000 },
+  };
+  const ctx = mkCtx(recipes, { A: 10, M: 999999, F: 100 }, { buyFactor: 1.1, sellFactor: 0.9 });
+  const m = chainMetrics('F', ctx);
+  near(m.cost, 3 * (2 * 10 * 1.1));            // 66 : remonte jusqu'à A, le prix de M est ignoré
+  near(m.power, 2000 + 3 * 1000);              // power cumulé de toute la chaîne
+  near(m.margin, 100 * 0.9 - 66);
+});
+
+test('chainMetrics : le goulot est l\'étape la plus lente de la chaîne', () => {
+  // M produit 1/h (×2 = 2/h) ; F en consomme 3 par unité -> F plafonné à 0,667/h alors que
+  // sa propre usine pourrait faire 2/h. Le goulot est donc M, pas F.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 3, power: 2000 },
+  };
+  const m = chainMetrics('F', mkCtx(recipes, { A: 1, F: 100 }));
+  near(m.rate, 2 / 3);
+  assert.strictEqual(m.bottleneck, 'M');
+  // Speed bonus sur M : le goulot bascule sur F une fois M assez rapide.
+  const m2 = chainMetrics('F', mkCtx(recipes, { A: 1, F: 100 }, { speed: { M: 3 } }));
+  near(m2.rate, 2);
+  assert.strictEqual(m2.bottleneck, 'F');
+});
+
+test('chainMetrics : recette à 2 inputs (arbre, pas une ligne)', () => {
+  // F = 1 M + 4 B, M lui-même = 2 A. Les deux branches se cumulent en coût et en power.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 1, input2: 'B', input2_amount: 4, power: 2000 },
+  };
+  const m = chainMetrics('F', mkCtx(recipes, { A: 10, B: 5, F: 100 }));
+  near(m.cost, 1 * (2 * 10) + 4 * 5);          // 40 : branche M (20) + branche B achetée (20)
+  near(m.power, 2000 + 1 * 1000);
+});
+
+test('chainMetrics : null si prix manquant, matière brute ou recette circulaire', () => {
+  const recipes = { B: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 5000 } };
+  assert.strictEqual(chainMetrics('B', mkCtx(recipes, { B: 30 })), null, 'prix de la matière A manquant');
+  assert.strictEqual(chainMetrics('B', mkCtx(recipes, { A: 10 })), null, 'prix de l\'output manquant');
+  assert.strictEqual(chainMetrics('A', mkCtx(recipes, { A: 10 })), null, 'A n\'a pas de recette');
+  const loop = {
+    X: { output: 1, duration: '1:00:00', input1: 'Y', input1_amount: 1, power: 1 },
+    Y: { output: 1, duration: '1:00:00', input1: 'X', input1_amount: 1, power: 1 },
+  };
+  assert.strictEqual(chainMetrics('X', mkCtx(loop, { X: 5, Y: 5 })), null, 'recettes circulaires');
 });

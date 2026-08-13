@@ -52,11 +52,12 @@
   </div>
 
   <!-- Tabs -->
-  <div class="flex gap-2 mb-4">
+  <div id="tabs" class="flex gap-2 mb-4">
     <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Prix</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('powerplant')">PowerPlant</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('batteries')">Batteries</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('chains')">Chaînes</button>
   </div>
 
   <!-- ── TAB RENTA ─────────────────────────────────────────────────────────── -->
@@ -70,12 +71,12 @@
       </label>
       <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe prélevée à la vente de l'output (colonne Vente)">
         Taxe vente
-        <input type="number" id="tax-input" step="0.1" min="0" max="100" value="2.5"
+        <input type="number" id="tax-input" step="0.1" min="0" max="100" value="3.5"
                oninput="onTaxChange(this.value)" class="w-16"> %
       </label>
       <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe prélevée à l'achat des inputs (colonne Achat)">
         Taxe achat
-        <input type="number" id="buytax-input" step="0.1" min="0" max="100" value="2.5"
+        <input type="number" id="buytax-input" step="0.1" min="0" max="100" value="3.5"
                oninput="onBuyTaxChange(this.value)" class="w-16"> %
       </label>
       <button onclick="onResetOrder()" class="text-xs text-slate-400 hover:text-slate-200"
@@ -204,6 +205,43 @@
             </tr>
           </thead>
           <tbody id="batteries-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB CHAÎNES ───────────────────────────────────────────────────────── -->
+  <div id="tab-chains" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="chains-select" onchange="renderChains()" class="w-48"></select>
+      <button id="chains-flat-btn" onclick="toggleChainsFlat()"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="chains-info"></span>
+    </div>
+    <p class="text-xs text-slate-500 mb-3">
+      Chaîne remontée automatiquement depuis les recettes jusqu'aux matières sans recette (achetées).
+      Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
+      vente sur la ressource de la ligne. Débit et goulot calculés avec <b>une usine par étape</b>.
+    </p>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="chains-table">
+          <thead>
+            <tr>
+              <th>Ressource</th>
+              <th>Niveau</th>
+              <th>coin/h</th>
+              <th>coin/kpow</th>
+              <th>Marge/u</th>
+              <th>Coût mat.</th>
+              <th>Prix</th>
+              <th>kpow/u</th>
+              <th>Débit u/h</th>
+              <th>Goulot</th>
+              <th>Étapes</th>
+            </tr>
+          </thead>
+          <tbody id="chains-body"></tbody>
         </table>
       </div>
     </div>

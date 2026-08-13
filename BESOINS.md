@@ -272,3 +272,28 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           (où `sf`/`bf` sont désormais calculés par ligne, plus une seule fois hors boucle).
         - **Non touché** : Up Cost / UpCost (Crafting, PowerPlant, Batteries) et le coin/kpow des centrales
           restent au prix brut, sans taxe d'achat.
+
+29. [x] **Nouvel onglet Chaînes** — rentabilité d'une chaîne de production complète.
+        - **Chaîne détectée automatiquement** depuis les recettes : on remonte l'arbre des inputs jusqu'aux
+          ressources **sans recette** (achetées au marché). 24 recettes ont 2 inputs → c'est un **arbre**,
+          pas une ligne (ex. DYNAMITE = 23 étapes).
+        - **Modèle** : seules les feuilles sont achetées (taxe d'achat), seule la ressource de la ligne est
+          vendue (taxe de vente) ; les intermédiaires ne passent pas par le marché, donc **aucune taxe** —
+          cohérent avec le besoin #28. Le prix de marché d'un intermédiaire n'entre jamais dans le calcul.
+        - `coinh.js` : `chainMetrics(name, ctx)` + `chainNode` récursif (mémoïsé, garde-fou anti-cycle).
+          `ctx = { recipeOf, priceOf, masteryOf, speedOf, buyFactor, sellFactor }`. Retourne
+          `{ cost, power, rate, bottleneck, margin, coinH, coinKPow }` **par unité produite**.
+          Débit : `rate(N) = min(débit propre, min amont / qté par unité)` → propage le **goulot**.
+        - `app.js` : `renderChains`, `chainCtx`, `chainSteps` (étapes amont d'abord), `toggleChainsFlat`.
+          Colonnes : Ressource | Niveau | coin/h | coin/kpow | Marge/u | Coût mat. | Prix | kpow/u |
+          Débit u/h | Goulot | Étapes. **Vue à plat par défaut** (44 ressources) ; le sélecteur montre
+          les étapes d'une chaîne, chacune avec SES propres métriques de chaîne (= « et si je vendais ici ? »).
+        - **Débit et goulot calculés avec une usine par étape** (hypothèse affichée sous les onglets).
+        - Vérifié par recoupement : implémentation JS ≡ script Python indépendant, aux prix live du jour
+          (OIL coin/h 102,01 / coin/kpow 0,649 / goulot FUEL).
+        - **Taxes par défaut passées à 3,5 %** (achat et vente) — taux réel du jeu confirmé par l'user.
+          NB : `cw_tax`/`cw_buytax` déjà en localStorage écrasent ce défaut.
+        - **Bug corrigé au passage** : `showTab` faisait `querySelectorAll('.tab-btn')`, qui attrape aussi les
+          boutons « À plat » (même classe) → ils perdaient leur surlignage à chaque changement d'onglet alors
+          que le mode à plat restait actif. Le conteneur de navigation a désormais `id="tabs"` et le sélecteur
+          est `#tabs .tab-btn`.
