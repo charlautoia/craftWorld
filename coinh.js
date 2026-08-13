@@ -125,7 +125,8 @@
   // seules les feuilles sont achetées (buyFactor) et seul `name` est vendu (sellFactor).
   // Les recettes à 2 inputs font de la chaîne un ARBRE, pas une ligne (24 recettes concernées).
   // ctx = { recipeOf(name)->recette|null, priceOf(name)->prix|null, masteryOf(name)->%,
-  //         speedOf(name)->fraction (Speed bonus Workshop), buyFactor, sellFactor }
+  //         speedOf(name)->fraction (Speed bonus Workshop), boughtOf(name)->bool (optionnel :
+  //         ressource achetée au marché au lieu d'être produite), buyFactor, sellFactor }
   // Retourne { cost, power, rate, bottleneck } par unité produite, ou null si non calculable.
   // `asInput` : true quand `name` est consommé par une autre recette, false à la racine de la chaîne.
   function chainNode(name, ctx, memo, stack, asInput) {
@@ -133,11 +134,14 @@
     if (memo[key] !== undefined) return memo[key];
     if (stack.indexOf(name) >= 0) return null;          // garde-fou : recettes circulaires
     const recipe = ctx.recipeOf(name);
-    // Une recette sans aucun input produit une ressource de base (EARTH, extraite de rien). Consommée
-    // par une autre recette, elle est comptée à son PRIX D'ACHAT, jamais comme gratuite ; à la racine
-    // on garde sa recette, pour que sa propre ligne montre bien son économie de production.
+    // Deux cas où `name` consommé par une autre recette est compté à son PRIX D'ACHAT plutôt que produit :
+    //  - recette sans aucun input (EARTH, extraite de rien) : jamais gratuite ;
+    //  - ressource marquée « achetée » par l'utilisateur (ctx.boughtOf) : on coupe la chaîne ici.
+    // Dans les deux cas on garde la recette À LA RACINE, pour que la propre ligne de `name` montre
+    // bien son économie de production.
     const base = !!recipe && !recipe.input1 && !recipe.input2;
-    if (!recipe || (asInput && base)) {                 // feuille : matière achetée au marché
+    const bought = !!ctx.boughtOf && !!ctx.boughtOf(name);
+    if (!recipe || (asInput && (base || bought))) {     // feuille : matière achetée au marché
       const p = ctx.priceOf(name);
       const leaf = p == null ? null
         : { cost: p * ctx.buyFactor, power: 0, rate: Infinity, bottleneck: null, raw: true };

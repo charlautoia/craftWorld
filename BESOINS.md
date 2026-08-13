@@ -343,3 +343,19 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           ARTICLE, DIPLOMA. Bornée à **DYNOKEY inclus**.
         - Ces 12 ressources n'avaient **aucun pool** (donc aucun prix) : elles remplissaient l'onglet
           Chaînes de lignes « prix manquant ». Retour à **34 ressources / 32 recettes, toutes avec pool**.
+
+34. [x] **Case « Acheter » par ressource** (onglet Chaînes, après Niveau) — couper la chaîne à une étape.
+        - Cochée, la ressource est prise à son **prix de marché** (taxe d'achat comprise) au lieu d'être
+          produite : la chaîne s'arrête là, son power n'est plus cumulé et elle cesse d'être un goulot
+          potentiel (approvisionnement marché illimité). Persistée dans `cw_bought`.
+        - Réutilise le mécanisme `asInput` du besoin #31 : `ctx.boughtOf(name)` s'ajoute à la règle de
+          coupure de `chainNode`. **À la racine la recette est conservée** — la propre ligne de la
+          ressource continue de montrer son économie de production, donc on voit toujours *pourquoi*
+          on a décidé de l'acheter.
+        - Case désactivée (« — ») pour une ressource de base (déjà toujours achetée) ou sans prix.
+        - `chainSteps` suit la même règle de coupure — au passage **correction** : il comptait encore
+          EARTH comme une étape depuis le besoin #31 (colonne Étapes surévaluée de 1).
+        - Cas d'usage réel (DYNAMITE, prix du jour) : FIBERGLASS coûte 11 204 à produire pour 9 899 au
+          marché. En l'achetant, DYNAMITE passe de **−855 à +1 548** de marge (coin/h −4,34 → +19,21),
+          le power tombe de 11 856 à 7 467 kpow/u, la chaîne de 22 à 17 étapes et le goulot se déplace
+          de SULFUR vers STONE.

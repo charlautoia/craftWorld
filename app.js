@@ -55,6 +55,7 @@ let mastery = {};        // ressource → bonus Mastery en % (s'ajoute au yield 
 let bonusPct = {};       // ressource → Speed bonus de prod en % (défaut = bonus data.json ×100)
 let buyFlag = {};        // ressource → true si j'achète ses inputs au marché (taxe d'achat appliquée)
 let sellFlag = {};       // ressource → true si je vends son output au marché (taxe de vente appliquée)
+let boughtFlag = {};     // ressource → true si je l'achète au marché au lieu de la produire (onglet Chaînes)
 let pricesLoaded = false;
 let dayVar = {};         // pool → variation 24h (%)
 
@@ -62,6 +63,7 @@ let dayVar = {};         // pool → variation 24h (%)
 const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
 const LS_TAX = 'cw_tax', LS_BUYTAX = 'cw_buytax';   // taxes globales vente/achat (scalaires)
 const LS_BUY = 'cw_buy', LS_SELL = 'cw_sell';       // cases Achat/Vente par ressource
+const LS_BOUGHT = 'cw_bought';                      // cases « Acheter » de l'onglet Chaînes
 const LS_ORDER = 'cw_order';   // ordre manuel des lignes
 function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
 function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
@@ -592,21 +594,27 @@ function chainCtx() {
       const r = DATA.resources.find(x => x.name === n);
       return (r && bonusPct[n] != null) ? bonusPct[n] / 100 : (r ? (r.bonus || 0) : 0);
     },
+    boughtOf: n => !!boughtFlag[n],
     buyFactor: 1 + buyTaxPct / 100,
     sellFactor: 1 - taxPct / 100,
   };
 }
 
-// Étapes de production de la chaîne de `name`, amont d'abord (les matières achetées n'en sont pas).
-function chainSteps(name, ctx, seen, stack) {
+// Étapes de production de la chaîne de `name`, amont d'abord. Même règle de coupure que chainNode :
+// une ressource achetée (sans recette, sans input, ou cochée « Acheter ») n'est pas une étape.
+function chainSteps(name, ctx, seen, stack, asInput) {
   seen = seen || []; stack = stack || [];
   if (seen.indexOf(name) >= 0 || stack.indexOf(name) >= 0) return seen;
   const recipe = ctx.recipeOf(name);
   if (!recipe) return seen;                     // matière sans recette : achetée, pas une étape
-  for (const s of [recipe.input1, recipe.input2]) if (s) chainSteps(s, ctx, seen, stack.concat(name));
+  const base = !recipe.input1 && !recipe.input2;
+  if (asInput && (base || ctx.boughtOf(name))) return seen;
+  for (const s of [recipe.input1, recipe.input2]) if (s) chainSteps(s, ctx, seen, stack.concat(name), true);
   seen.push(name);
   return seen;
 }
+
+function onBoughtChange(name, checked) { boughtFlag[name] = checked; saveLS(LS_BOUGHT, boughtFlag); renderChains(); }
 
 function toggleChainsFlat() {
   chainsFlat = !chainsFlat;
@@ -628,6 +636,17 @@ function renderChains() {
     : `${names.length} étapes jusqu'à ${sel}`;
 
   const wait = '<span class="spin neutral">⟳</span>';
+  // Case « Acheter » : coupe la chaîne ici, la ressource est prise à son prix de marché.
+  // Désactivée si elle n'a pas de prix, ou si c'est une ressource de base (déjà toujours achetée).
+  const boughtCell = n => {
+    const recipe = ctx.recipeOf(n);
+    const base = recipe && !recipe.input1 && !recipe.input2;
+    const noPrice = priceByName(n) == null;
+    if (base) return '<span class="neutral" title="Ressource de base : toujours comptée à l\'achat">—</span>';
+    if (noPrice) return '<span class="neutral" title="Pas de prix de marché : impossible à acheter">—</span>';
+    return `<input type="checkbox"${boughtFlag[n] ? ' checked' : ''}
+       onchange="onBoughtChange('${n}', this.checked)" class="accent-amber-500">`;
+  };
   const signCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
@@ -638,6 +657,7 @@ function renderChains() {
     if (!m) return `<tr>
       <td class="font-semibold text-white">${name}</td>
       <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td class="text-center">${boughtCell(name)}</td>
       <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
     // Prix net encaissé = marge + coût matières (par construction de chainMetrics) : garantit que la
@@ -649,6 +669,7 @@ function renderChains() {
     return `<tr>
       <td class="font-semibold text-white">${name}</td>
       <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>
       <td>${signCell(m.coinKPow)}</td>
       <td>${signCell(m.margin)}</td>
@@ -683,6 +704,7 @@ async function init() {
     Object.assign(bonusPct, loadLS(LS_BONUS));
     Object.assign(buyFlag, loadLS(LS_BUY));
     Object.assign(sellFlag, loadLS(LS_SELL));
+    Object.assign(boughtFlag, loadLS(LS_BOUGHT));   // cases « Acheter » de l'onglet Chaînes
     const savedTax = parseFloat(localStorage.getItem(LS_TAX));   // taxes globales persistées
     if (!isNaN(savedTax)) taxPct = savedTax;
     const savedBuyTax = parseFloat(localStorage.getItem(LS_BUYTAX));

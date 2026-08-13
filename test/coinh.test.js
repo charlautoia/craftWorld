@@ -297,3 +297,37 @@ test('chainMetrics : une ressource de base (recette sans input) est comptée au 
   near(e.margin, 10 * 1);                      // sellFactor 1 dans ce ctx
   near(e.coinKPow, 10 * 1000 / 7);
 });
+
+test('chainMetrics : ctx.boughtOf coupe la chaîne et prend le prix du marché', () => {
+  // A -> M -> F. M est déficitaire à produire (30 en matières pour 20 au marché) : l'acheter aide F.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 3, power: 5000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 2, power: 2000 },
+  };
+  const px = { A: 10, M: 20, F: 100 };
+  const produit = chainMetrics('F', mkCtx(recipes, px));
+  near(produit.cost, 2 * 3 * 10);                   // 60 : M produit depuis A
+  near(produit.power, 2000 + 2 * 5000);             // on fait tourner l'usine M
+
+  const ctx = mkCtx(recipes, px); ctx.boughtOf = n => n === 'M';
+  const achete = chainMetrics('F', ctx);
+  near(achete.cost, 2 * 20);                        // 40 : M pris au marché -> moins cher
+  near(achete.power, 2000);                         // l'usine M ne tourne plus : son power disparaît
+  assert.ok(achete.margin > produit.margin, 'acheter M améliore la marge de F');
+  assert.strictEqual(achete.bottleneck, 'F');       // M acheté : approvisionnement illimité
+
+  // La ligne de M elle-même garde sa recette (racine), même marquée « achetée ».
+  const m = chainMetrics('M', ctx);
+  near(m.cost, 3 * 10);
+  near(m.power, 5000);
+});
+
+test('chainMetrics : boughtOf applique bien la taxe d\'achat', () => {
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 3, power: 5000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 2, power: 2000 },
+  };
+  const ctx = mkCtx(recipes, { A: 10, M: 20, F: 100 }, { buyFactor: 1.035 });
+  ctx.boughtOf = n => n === 'M';
+  near(chainMetrics('F', ctx).cost, 2 * 20 * 1.035);
+});
