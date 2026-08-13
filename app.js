@@ -640,6 +640,8 @@ function renderChains() {
       <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
       <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
+    // Prix net encaissé = marge + coût matières (par construction de chainMetrics) : garantit que la
+    // colonne affichée est exactement celle qui a servi au calcul de la marge.
     // Goulot : rouge si c'est l'usine de la ligne elle-même, sinon c'est une étape amont.
     const gl = m.bottleneck === name
       ? `<span class="text-rose-300">${m.bottleneck}</span>`
@@ -652,7 +654,7 @@ function renderChains() {
       <td>${signCell(m.margin)}</td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.cost)}</span></td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.directCost)}</span></td>
-      <td><span class="text-amber-300 font-mono">${fmtPrice(priceByName(name))}</span></td>
+      <td><span class="text-amber-300 font-mono">${fmtPrice(m.margin + m.cost)}</span></td>
       <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
       <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
       <td>${gl}</td>

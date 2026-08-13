@@ -221,7 +221,9 @@
     <p class="text-xs text-slate-500 mb-3">
       Chaîne remontée automatiquement depuis les recettes jusqu'aux matières sans recette (achetées).
       Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
-      vente sur la ressource de la ligne. Débit et goulot calculés avec <b>une usine par étape</b>.
+      vente sur la ressource de la ligne. <b>Prix net</b> = cours du marché moins la taxe de vente,
+      c'est-à-dire ce que tu encaisses réellement — donc <b>Marge/u = Prix net − Coût mat.</b>
+      Débit et goulot calculés avec <b>une usine par étape</b>.
     </p>
     <div class="rounded-xl overflow-hidden border border-slate-700">
       <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -235,7 +237,7 @@
               <th>Marge/u</th>
               <th title="Coût cumulé des matières de base achetées, en remontant toute la chaîne">Coût mat.</th>
               <th title="Coût des inputs de cette usine seule, achetés au marché (taxe d'achat comprise). Plus cher que Coût mat. = produire l'intermédiaire soi-même est rentable.">Coût inputs</th>
-              <th>Prix</th>
+              <th title="Cours du marché moins la taxe de vente : ce que tu encaisses réellement en vendant une unité">Prix net</th>
               <th>kpow/u</th>
               <th>Débit u/h</th>
               <th>Goulot</th>

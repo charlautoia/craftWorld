@@ -325,3 +325,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           quand MUD la consomme — seul l'onglet Chaînes la rendait gratuite.
         - Effet : MUD passe de rentable à **perdant** (coût 0,0125 pour un prix de 0,0121), et pour STEEL
           il devient visible qu'**acheter le COPPER** (39,26) coûte moins cher que de le produire (40,31).
+
+32. [x] **Colonne « Prix net »** (onglet Chaînes) — remplace l'affichage du cours brut.
+        - Affiche le prix **encaissé** = cours du marché × (1 − taxe de vente), au lieu du cours brut.
+          Motif : le cours brut ne se comparait à aucune autre colonne (les deux colonnes de coût sont
+          taxe d'achat comprise), ce qui invitait à calculer une marge fausse par simple soustraction.
+        - Rend le tableau vérifiable de tête : **Marge/u = Prix net − Coût mat.** (aux arrondis
+          d'affichage près, 3 chiffres significatifs).
+        - `app.js` : la cellule affiche `m.margin + m.cost` plutôt que `priceByName(name) * sellFactor` —
+          par construction de `chainMetrics`, c'est exactement le prix ayant servi au calcul de la marge,
+          donc aucun risque de divergence entre l'affichage et le calcul.
+        - Mention ajoutée dans le texte explicatif sous les onglets + tooltip sur l'en-tête.
