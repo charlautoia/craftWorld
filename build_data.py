@@ -227,13 +227,15 @@ def parse_batteries(rows):
 
 
 def select_resources(recipe_order):
-    """Items retenus : factories (début → DYNAMITE inclus) + items (BOLTS → fin) + éléments bruts.
-    On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
+    """Items retenus : factories (début → DYNAMITE inclus) + items (BOLTS → DYNOKEY inclus) + éléments bruts.
+    On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS, ainsi que
+    tout ce qui suit DYNOKEY (WIRE, NEST, WRAP, BOOK, SALT, ARTICLE, DIPLOMA... : obsolètes, sans pool)."""
     names = set(ELEMENTS)
     if "DYNAMITE" in recipe_order:
         names |= set(recipe_order[:recipe_order.index("DYNAMITE") + 1])
     if "BOLTS" in recipe_order:
-        names |= set(recipe_order[recipe_order.index("BOLTS"):])
+        end = recipe_order.index("DYNOKEY") + 1 if "DYNOKEY" in recipe_order else len(recipe_order)
+        names |= set(recipe_order[recipe_order.index("BOLTS"):end])
     return names
 
 

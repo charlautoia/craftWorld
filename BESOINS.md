@@ -336,3 +336,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           par construction de `chainMetrics`, c'est exactement le prix ayant servi au calcul de la marge,
           donc aucun risque de divergence entre l'affichage et le calcul.
         - Mention ajoutée dans le texte explicatif sous les onglets + tooltip sur l'en-tête.
+
+33. [x] **Ressources après DYNOKEY retirées** (obsolètes) — `select_resources` dans `build_data.py`.
+        - La sélection « BOLTS → fin » ramassait tout ce que la team avait ajouté après DYNOKEY dans le
+          Sheet : WIRE, NEST/WETNEST/WARMNEST/DYNONEST, PAPERWRAP/SANDWRAP/STEAMWRAP, BOOK, SALT,
+          ARTICLE, DIPLOMA. Bornée à **DYNOKEY inclus**.
+        - Ces 12 ressources n'avaient **aucun pool** (donc aucun prix) : elles remplissaient l'onglet
+          Chaînes de lignes « prix manquant ». Retour à **34 ressources / 32 recettes, toutes avec pool**.
