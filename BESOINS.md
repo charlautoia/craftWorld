@@ -153,7 +153,8 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
 
 18. [x] **Ordre d'affichage par défaut** (choix user) — remplace l'ordre du besoin #7.
         - `PREFERRED_ORDER` dans `build_data.py` : EARTH, MUD, CLAY, SAND, COPPER, STEEL, SCREWS, WATER, SEAWATER,
-          ALGAE, OXYGEN, GAS, FUEL, OIL, FIRE, LAVA, GLASS, SULFUR, FIBERGLASS — **puis le reste** (ordre Game Data).
+          ALGAE, OXYGEN, GAS, FUEL, OIL, **ACID, CERAMICS, STONE, CEMENT**, FIRE, LAVA, GLASS, SULFUR, HEAT, STEAM,
+          ENERGY, HYDROGEN, FIBERGLASS, PLASTICS, DYNAMITE — **puis le reste** (ordre Game Data).
         - Ordonne `resources` dans `data.json` (appliqué aussi en place). C'est l'ordre **par défaut** ; un ordre manuel
           (`cw_order`, besoin #17) le surcharge → bouton « ↺ ordre du jeu » pour revenir à ce défaut.
 

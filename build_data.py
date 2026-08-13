@@ -69,8 +69,8 @@ ELEMENTS = ["EARTH", "FIRE", "WATER"]
 
 # Ordre d'affichage préféré (choix user) : ces ressources en tête, puis le reste dans l'ordre du Game Data.
 PREFERRED_ORDER = ["EARTH", "MUD", "CLAY", "SAND", "COPPER", "STEEL", "SCREWS", "WATER", "SEAWATER",
-                   "ALGAE", "OXYGEN", "GAS", "FUEL", "OIL", "FIRE", "LAVA", "GLASS", "SULFUR",
-                   "HEAT", "CERAMICS", "STONE", "STEAM", "CEMENT", "ACID", "ENERGY", "HYDROGEN",
+                   "ALGAE", "OXYGEN", "GAS", "FUEL", "OIL", "ACID", "CERAMICS", "STONE", "CEMENT",
+                   "FIRE", "LAVA", "GLASS", "SULFUR", "HEAT", "STEAM", "ENERGY", "HYDROGEN",
                    "FIBERGLASS", "PLASTICS", "DYNAMITE"]
 
 # Niveau d'usine actuel par ressource (= défaut du sélecteur de niveau dans l'UI ; ta progression).
