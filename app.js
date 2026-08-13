@@ -626,14 +626,17 @@ function toggleChainsFlat() {
 function renderChains() {
   const ctx = chainCtx();
   const sel = document.getElementById('chains-select').value;
+  // Liste AFFICHÉE : on ignore les cases « Acheter » (ctx sans boughtOf), sinon cocher une étape la
+  // ferait disparaître avec sa propre case, la rendant impossible à décocher.
+  const displayCtx = Object.assign({}, ctx, { boughtOf: () => false });
   // Vue à plat : toutes les ressources produisibles. Sinon : les étapes de la chaîne choisie (amont d'abord).
   const names = chainsFlat
     ? DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name)
-    : chainSteps(sel, ctx);
+    : chainSteps(sel, displayCtx);
 
   document.getElementById('chains-info').textContent = chainsFlat
     ? `${names.length} ressources`
-    : `${names.length} étapes jusqu'à ${sel}`;
+    : `${chainSteps(sel, ctx).length} étapes jusqu'à ${sel}`;   // décompte réel : achats déduits
 
   const wait = '<span class="spin neutral">⟳</span>';
   // Case « Acheter » : coupe la chaîne ici, la ressource est prise à son prix de marché.
@@ -666,7 +669,10 @@ function renderChains() {
     const gl = m.bottleneck === name
       ? `<span class="text-rose-300">${m.bottleneck}</span>`
       : `<span class="text-slate-400">${m.bottleneck ?? '—'}</span>`;
-    return `<tr>
+    // Ligne achetée : atténuée, car elle ne fait plus partie de la chaîne — ses chiffres restent
+    // affichés pour montrer l'économie de production à laquelle on renonce.
+    const dim = boughtFlag[name] ? ' style="opacity:.5"' : '';
+    return `<tr${dim}>
       <td class="font-semibold text-white">${name}</td>
       <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
       <td class="text-center">${boughtCell(name)}</td>

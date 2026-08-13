@@ -359,3 +359,13 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           marché. En l'achetant, DYNAMITE passe de **−855 à +1 548** de marge (coin/h −4,34 → +19,21),
           le power tombe de 11 856 à 7 467 kpow/u, la chaîne de 22 à 17 étapes et le goulot se déplace
           de SULFUR vers STONE.
+
+35. [x] **Correctif #34** — cocher « Acheter » faisait disparaître la ligne, la rendant impossible à décocher.
+        - Cause : en vue par chaîne, la liste affichée venait de `chainSteps(sel, ctx)`, qui coupe sur les
+          ressources achetées. Cocher une étape la retirait donc de la liste **avec sa propre case**.
+        - Correctif : la liste **affichée** est calculée avec un ctx où `boughtOf` renvoie toujours faux
+          (`displayCtx`), donc l'arbre reste stable quoi qu'on coche. Le décompte « N étapes » de la
+          barre d'info utilise, lui, le ctx réel (achats déduits) — sur DYNAMITE : 22 lignes affichées,
+          « 17 étapes » annoncées après achat de FIBERGLASS.
+        - Les lignes achetées sont **atténuées** (opacity .5) : elles ne font plus partie de la chaîne,
+          mais leurs chiffres restent lisibles pour voir l'économie de production à laquelle on renonce.
