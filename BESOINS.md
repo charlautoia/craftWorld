@@ -310,3 +310,18 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Contrôles : SEAWATER affiche deux coûts **identiques** (son input WATER est déjà acheté) ;
           les chaînes issues d'EARTH ont **Coût mat. = 0** car EARTH est une recette **sans input**
           (extraite de rien, power 7) — leur seul coût réel est le power.
+
+31. [x] **EARTH comptée à son prix d'achat** dans l'onglet Chaînes (correction du besoin #29).
+        - EARTH est la **seule recette sans aucun input** du Game Data (extraite de rien, power 7). `chainNode`
+          la traitait donc comme une production **gratuite**, et toutes les chaînes issues d'EARTH
+          affichaient `Coût mat. = 0` — ce qui les faisait paraître rentables à tort.
+        - Règle : une recette sans input, **consommée par une autre recette**, est comptée à son
+          **prix d'achat** (taxe d'achat comprise), comme n'importe quelle matière de base. Son power
+          n'est plus cumulé non plus (on n'exploite pas la mine, on achète). `chainNode` prend un flag
+          `asInput` ; la mémoïsation est donc clé `nom|in` / `nom|root`.
+        - **À la racine, la recette est conservée** : la ligne EARTH elle-même continue de montrer son
+          économie de production (coût matières 0, power 7, son propre coin/kpow).
+        - Cohérence retrouvée avec les onglets Prix et Crafting, qui valorisaient déjà EARTH au marché
+          quand MUD la consomme — seul l'onglet Chaînes la rendait gratuite.
+        - Effet : MUD passe de rentable à **perdant** (coût 0,0125 pour un prix de 0,0121), et pour STEEL
+          il devient visible qu'**acheter le COPPER** (39,26) coûte moins cher que de le produire (40,31).

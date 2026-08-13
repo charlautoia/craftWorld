@@ -127,18 +127,24 @@
   // ctx = { recipeOf(name)->recette|null, priceOf(name)->prix|null, masteryOf(name)->%,
   //         speedOf(name)->fraction (Speed bonus Workshop), buyFactor, sellFactor }
   // Retourne { cost, power, rate, bottleneck } par unité produite, ou null si non calculable.
-  function chainNode(name, ctx, memo, stack) {
-    if (memo[name] !== undefined) return memo[name];
+  // `asInput` : true quand `name` est consommé par une autre recette, false à la racine de la chaîne.
+  function chainNode(name, ctx, memo, stack, asInput) {
+    const key = name + (asInput ? '|in' : '|root');
+    if (memo[key] !== undefined) return memo[key];
     if (stack.indexOf(name) >= 0) return null;          // garde-fou : recettes circulaires
     const recipe = ctx.recipeOf(name);
-    if (!recipe) {                                      // pas de recette -> matière achetée (feuille)
+    // Une recette sans aucun input produit une ressource de base (EARTH, extraite de rien). Consommée
+    // par une autre recette, elle est comptée à son PRIX D'ACHAT, jamais comme gratuite ; à la racine
+    // on garde sa recette, pour que sa propre ligne montre bien son économie de production.
+    const base = !!recipe && !recipe.input1 && !recipe.input2;
+    if (!recipe || (asInput && base)) {                 // feuille : matière achetée au marché
       const p = ctx.priceOf(name);
       const leaf = p == null ? null
         : { cost: p * ctx.buyFactor, power: 0, rate: Infinity, bottleneck: null, raw: true };
-      return (memo[name] = leaf);
+      return (memo[key] = leaf);
     }
     const B = recipe.output, hrs = durationHours(recipe.duration);
-    if (!B || hrs == null) return (memo[name] = null);
+    if (!B || hrs == null) return (memo[key] = null);
     const yf = yieldFactor(recipe.yield_pct, ctx.masteryOf(name));
     let cost = 0, power = (recipe.power || 0) / B;
     let rate = B / (hrs / (2 * (1 + (ctx.speedOf(name) || 0))));   // débit de CETTE usine (bonus vidéo *2)
@@ -147,14 +153,14 @@
     for (const [symb, amt] of inputs) {
       if (!symb || !amt) continue;
       const per = amt * yf / B;                         // quantité d'input par unité produite
-      const sub = chainNode(symb, ctx, memo, stack.concat(name));
-      if (!sub) return (memo[name] = null);
+      const sub = chainNode(symb, ctx, memo, stack.concat(name), true);
+      if (!sub) return (memo[key] = null);
       cost += per * sub.cost;
       power += per * sub.power;
       const upstream = sub.rate / per;                  // débit amont converti en unités de `name`
       if (upstream < rate) { rate = upstream; bottleneck = sub.bottleneck; }
     }
-    return (memo[name] = { cost, power, rate, bottleneck, raw: false });
+    return (memo[key] = { cost, power, rate, bottleneck, raw: false });
   }
 
   // Coût des inputs de la SEULE usine `name`, achetés au marché (taxe d'achat comprise), par unité produite.
@@ -180,7 +186,7 @@
   // coinH = marge * débit de la chaîne (bridé par le goulot) ; coinKPow = marge par 1000 de power cumulé.
   // Retourne null si `name` n'a pas de recette ou si un prix de la chaîne manque.
   function chainMetrics(name, ctx) {
-    const n = chainNode(name, ctx, {}, []);
+    const n = chainNode(name, ctx, {}, [], false);
     if (!n || n.raw) return null;
     const p = ctx.priceOf(name);
     if (p == null) return null;

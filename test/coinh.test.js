@@ -276,3 +276,24 @@ test('chainMetrics.directCost = null si prix d\'un input manquant', () => {
   assert.strictEqual(f.directCost, null);
   near(f.cost, 3 * 2 * 10);
 });
+
+test('chainMetrics : une ressource de base (recette sans input) est comptée au prix d\'achat', () => {
+  // E est extraite de rien (comme EARTH). Consommée par F, elle ne doit PAS être gratuite.
+  const recipes = {
+    E: { output: 1, duration: '1:00:00', power: 7 },
+    F: { output: 1, duration: '1:00:00', input1: 'E', input1_amount: 3, power: 2000 },
+  };
+  const ctx = mkCtx(recipes, { E: 10, F: 100 }, { buyFactor: 1.1 });
+  const f = chainMetrics('F', ctx);
+  near(f.cost, 3 * 10 * 1.1);                  // 33 : E achetée, taxe d'achat comprise (et non 0)
+  near(f.directCost, f.cost);                  // acheter E ou « la produire » revient au même
+  near(f.power, 2000);                         // on n'exploite pas la mine de E -> son power ne compte pas
+  assert.strictEqual(f.bottleneck, 'F');       // E achetée : approvisionnement illimité, jamais le goulot
+
+  // À la racine, E garde sa propre recette : sa ligne montre bien son économie de production.
+  const e = chainMetrics('E', ctx);
+  near(e.cost, 0);                             // extraite de rien : aucune matière à payer
+  near(e.power, 7);
+  near(e.margin, 10 * 1);                      // sellFactor 1 dans ce ctx
+  near(e.coinKPow, 10 * 1000 / 7);
+});
