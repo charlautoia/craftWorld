@@ -1,6 +1,7 @@
 let DATA = { resources: [], crafting: {} };
 let livePrice = {};      // pool → price
 let taxPct = 2.5;        // taxe de vente globale en % (configurable) → facteur de vente = 1 − taxPct/100
+let buyTaxPct = 2.5;     // taxe d'achat globale en % (configurable) → facteur d'achat = 1 + buyTaxPct/100
 let customOrder = null;  // ordre manuel des lignes (array de noms) ; null = ordre du jeu (data.json)
 let rentaSort = { key: 'game', dir: 1 };   // 'game' = ordre du jeu (ordre de data.json), non trié
 
@@ -41,7 +42,7 @@ function sortRenta(key) {
   document.querySelectorAll('#renta-table th').forEach(th => {
     th.classList.remove('sorted-asc', 'sorted-desc');
   });
-  const thIdx = ['name','coinh','coinkp','prix_live','d24','mastery','bonus','pool'].indexOf(key);
+  const thIdx = ['name','coinh','coinkp','prix_live','d24','mastery','bonus','buy','sell','pool'].indexOf(key);
   const ths = document.querySelectorAll('#renta-table th');
   if (thIdx >= 0) ths[thIdx].classList.add(rentaSort.dir === 1 ? 'sorted-asc' : 'sorted-desc');
   renderRenta();
@@ -51,12 +52,15 @@ function sortRenta(key) {
 let factoryLevel = {};   // ressource → niveau d'usine choisi
 let mastery = {};        // ressource → bonus Mastery en % (s'ajoute au yield du niveau, réduit les inputs ; défaut 5.3)
 let bonusPct = {};       // ressource → Speed bonus de prod en % (défaut = bonus data.json ×100)
+let buyFlag = {};        // ressource → true si j'achète ses inputs au marché (taxe d'achat appliquée)
+let sellFlag = {};       // ressource → true si je vends son output au marché (taxe de vente appliquée)
 let pricesLoaded = false;
 let dayVar = {};         // pool → variation 24h (%)
 
 // Persistance navigateur (les valeurs saisies survivent au rechargement).
 const LS_LEVELS = 'cw_levels', LS_MASTERY = 'cw_mastery_pct', LS_BONUS = 'cw_bonus_pct';   // _pct : valeurs en %
-const LS_TAX = 'cw_tax';   // taxe de vente globale (scalaire)
+const LS_TAX = 'cw_tax', LS_BUYTAX = 'cw_buytax';   // taxes globales vente/achat (scalaires)
+const LS_BUY = 'cw_buy', LS_SELL = 'cw_sell';       // cases Achat/Vente par ressource
 const LS_ORDER = 'cw_order';   // ordre manuel des lignes
 function loadLS(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
 function saveLS(key, obj) { try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
@@ -73,7 +77,8 @@ function coinPerHour(name) {
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
   const bonus = bonusPct[name] != null ? bonusPct[name] / 100 : (r.bonus || 0);   // Speed bonus en % → fraction
   // Mastery passée en % : coinh.js l'ajoute au yield du niveau (recipe.yield_pct) pour réduire le coût des inputs.
-  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mastery[name], sellFactor());
+  return CoinH.coinPerHour(recipe, priceByName(name), priceByName, bonus, mastery[name],
+                           sellFactorFor(name), buyFactorFor(name));
 }
 
 // coin/kpower : coins par 1000 de power (indépendant de la vitesse).
@@ -81,12 +86,20 @@ function coinPerKPower(name) {
   const r = DATA.resources.find(x => x.name === name);
   if (!r || r.level == null) return null;
   const recipe = (DATA.crafting[name] || []).find(l => l.level === factoryLevel[name]);
-  return CoinH.coinPerKPower(recipe, priceByName(name), priceByName, mastery[name], sellFactor());
+  return CoinH.coinPerKPower(recipe, priceByName(name), priceByName, mastery[name],
+                             sellFactorFor(name), buyFactorFor(name));
 }
 
-// Facteur de vente = 1 − taxe/100 (taxe globale configurable).
-function sellFactor() { return 1 - taxPct / 100; }
+// Les taxes sont des frais réels sur une transaction : elles ne s'appliquent que si la transaction a lieu.
+// Vente cochée → l'output part au marché (1 − taxe_vente) ; décochée → consommé en aval, aucune taxe.
+// Achat coché  → les inputs viennent du marché (1 + taxe_achat) ; décoché → produits soi-même, aucune taxe.
+function sellFactorFor(name) { return sellFlag[name] ? 1 - taxPct / 100 : 1; }
+function buyFactorFor(name) { return buyFlag[name] ? 1 + buyTaxPct / 100 : 1; }
+
 function onTaxChange(val) { taxPct = +val; try { localStorage.setItem(LS_TAX, taxPct); } catch (e) {} renderRenta(); }
+function onBuyTaxChange(val) { buyTaxPct = +val; try { localStorage.setItem(LS_BUYTAX, buyTaxPct); } catch (e) {} renderRenta(); }
+function onBuyChange(name, checked) { buyFlag[name] = checked; saveLS(LS_BUY, buyFlag); renderRenta(); }
+function onSellChange(name, checked) { sellFlag[name] = checked; saveLS(LS_SELL, sellFlag); renderRenta(); }
 
 function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }
 function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
@@ -110,6 +123,22 @@ function bonusCell(r) {
   return `<input type="number" step="0.1" min="0" value="${v}"
      onchange="onBonusChange('${r.name}', this.value)"
      class="w-16 text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5"> %`;
+}
+
+// Colonne Achat : les inputs de cette recette sont-ils achetés au marché ? ("—" si la recette n'a pas d'input)
+function buyCell(r) {
+  if (r.level == null) return '—';
+  const recipe = (DATA.crafting[r.name] || []).find(l => l.level === factoryLevel[r.name]);
+  if (!recipe || !recipe.input1) return '—';
+  return `<input type="checkbox"${buyFlag[r.name] ? ' checked' : ''}
+     onchange="onBuyChange('${r.name}', this.checked)" class="accent-rose-500">`;
+}
+
+// Colonne Vente : l'output de cette recette est-il vendu au marché (vs consommé par une recette en aval) ?
+function sellCell(r) {
+  if (r.level == null) return '—';
+  return `<input type="checkbox"${sellFlag[r.name] ? ' checked' : ''}
+     onchange="onSellChange('${r.name}', this.checked)" class="accent-emerald-500">`;
 }
 
 // Variation 24h (déjà fournie par le fetch de prix, aucun appel supplémentaire).
@@ -229,6 +258,8 @@ function renderRenta() {
       <td>${dayCell(r)}</td>
       <td>${masteryCell(r)}</td>
       <td>${bonusCell(r)}</td>
+      <td class="text-center">${buyCell(r)}</td>
+      <td class="text-center">${sellCell(r)}</td>
       <td>${poolLink}</td>
     </tr>`;
   }).join('');
@@ -318,7 +349,6 @@ function renderCrafting() {
     ? `${entries.length} recettes — ${Object.keys(DATA.crafting).length} ressources`
     : `${entries.length} niveaux`;
 
-  const sf = sellFactor();
   const coinCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">⟳</span>')
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
@@ -328,18 +358,19 @@ function renderCrafting() {
 
   const sumByRes = {};   // somme cumulée des coûts d'upgrade par ressource (en ordre de niveau)
   document.getElementById('crafting-body').innerHTML = entries.map(({ name, l }) => {
-    // coin/h et coin/kpow avec la Mastery / Speed bonus / taxe de CETTE ressource.
+    // coin/h et coin/kpow avec la Mastery / Speed bonus / cases Achat-Vente de CETTE ressource.
     const r = DATA.resources.find(x => x.name === name);
     const bonus = (r && bonusPct[name] != null) ? bonusPct[name] / 100 : (r ? (r.bonus || 0) : 0);
     const m = mastery[name], po = priceByName(name);
+    const sf = sellFactorFor(name), bf = buyFactorFor(name);
     const uc = CoinH.upgradeCost(l, priceByName);                    // coût d'upgrade vers ce niveau (COIN)
     if (uc != null) sumByRes[name] = (sumByRes[name] || 0) + uc;     // somme cumulée (ordre de niveau)
     const us = sumByRes[name] != null ? sumByRes[name] : null;
     const resTd = flat ? `<td class="font-semibold text-white">${name}</td>` : '';
     return `<tr>
       ${resTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
-      <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf))}</td>
-      <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf))}</td>
+      <td>${coinCell(CoinH.coinPerHour(l, po, priceByName, bonus, m, sf, bf))}</td>
+      <td>${coinCell(CoinH.coinPerKPower(l, po, priceByName, m, sf, bf))}</td>
       <td>${costCell(uc)}</td>
       <td>${costCell(us)}</td>
       <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
@@ -553,16 +584,27 @@ async function init() {
     DATA = await res.json();
 
     // Niveau d'usine + Mastery + Speed bonus : défauts, puis valeurs sauvegardées.
+    // Vente : cochée par défaut (on vend ce qu'on produit). Achat : coché seulement si un input n'a
+    // aucune recette (EARTH/WATER/FIRE/DUST) — il ne peut alors venir que du marché.
     DATA.resources.forEach(r => { if (r.level != null) {
       factoryLevel[r.name] = r.level; mastery[r.name] = 5.3; bonusPct[r.name] = (r.bonus || 0) * 100;
+      sellFlag[r.name] = true;
+      buyFlag[r.name] = (DATA.crafting[r.name] || []).some(l =>
+        [l.input1, l.input2].some(i => i && !DATA.crafting[i]));
     } });
     Object.assign(factoryLevel, loadLS(LS_LEVELS));
     Object.assign(mastery, loadLS(LS_MASTERY));
     Object.assign(bonusPct, loadLS(LS_BONUS));
-    const savedTax = parseFloat(localStorage.getItem(LS_TAX));   // taxe globale persistée
+    Object.assign(buyFlag, loadLS(LS_BUY));
+    Object.assign(sellFlag, loadLS(LS_SELL));
+    const savedTax = parseFloat(localStorage.getItem(LS_TAX));   // taxes globales persistées
     if (!isNaN(savedTax)) taxPct = savedTax;
+    const savedBuyTax = parseFloat(localStorage.getItem(LS_BUYTAX));
+    if (!isNaN(savedBuyTax)) buyTaxPct = savedBuyTax;
     const taxInput = document.getElementById('tax-input');
     if (taxInput) taxInput.value = taxPct;
+    const buyTaxInput = document.getElementById('buytax-input');
+    if (buyTaxInput) buyTaxInput.value = buyTaxPct;
     try { const o = JSON.parse(localStorage.getItem(LS_ORDER)); if (Array.isArray(o)) customOrder = o; } catch (e) {}
 
     // Populate crafting selector

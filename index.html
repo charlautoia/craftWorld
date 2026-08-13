@@ -68,10 +68,15 @@
         <input type="checkbox" id="only-pool" onchange="renderRenta()" class="accent-indigo-500">
         Avec pool seulement
       </label>
-      <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe de vente appliquée au prix (coin/h et coin/kpower)">
+      <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe prélevée à la vente de l'output (colonne Vente)">
         Taxe vente
         <input type="number" id="tax-input" step="0.1" min="0" max="100" value="2.5"
                oninput="onTaxChange(this.value)" class="w-16"> %
+      </label>
+      <label class="flex items-center gap-2 text-sm text-slate-400" title="Taxe prélevée à l'achat des inputs (colonne Achat)">
+        Taxe achat
+        <input type="number" id="buytax-input" step="0.1" min="0" max="100" value="2.5"
+               oninput="onBuyTaxChange(this.value)" class="w-16"> %
       </label>
       <button onclick="onResetOrder()" class="text-xs text-slate-400 hover:text-slate-200"
               title="Rétablir l'ordre du jeu">↺ ordre du jeu</button>
@@ -89,6 +94,8 @@
               <th onclick="sortRenta('d24')">24h</th>
               <th>Mastery</th>
               <th>Speed bonus</th>
+              <th title="J'achète les inputs au marché → taxe d'achat appliquée">Achat</th>
+              <th title="Je vends l'output au marché → taxe de vente appliquée">Vente</th>
               <th>Pool</th>
             </tr>
           </thead>

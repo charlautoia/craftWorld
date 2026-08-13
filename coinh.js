@@ -1,7 +1,9 @@
 // Calcul pur de coin/h (différence acheter vs produire), partagé par index.html et les tests.
 // Aucune dépendance, aucun accès au DOM. Reprend la formule de l'Excel (onglet data, col E) :
-//   coin/h = (prix_out*0.975 - Σ(qté_input*yf*prix_input)/output) * output / heures * 2 * (1 + bonus)
-//   où   *2         = bonus VIDÉO +100 % permanent ("Speed Bonus from Video" du jeu) ;
+//   coin/h = (prix_out*sf - Σ(qté_input*yf*prix_input*bf)/output) * output / heures * 2 * (1 + bonus)
+//   où   sf         = 1 − taxe_vente si l'output est vendu, 1 sinon (consommé en aval : pas de transaction) ;
+//        bf         = 1 + taxe_achat si les inputs sont achetés, 1 sinon (produits soi-même) ;
+//        *2         = bonus VIDÉO +100 % permanent ("Speed Bonus from Video" du jeu) ;
 //        *(1+bonus) = Speed bonus Workshop de l'usine (bonus de VITESSE : cumul multiplicatif avec *2,
 //                     réduit la durée -> durée_effective = durée / (2*(1+bonus)).
 //                     Vérifié SCREWS niv 7 : 15h / (2*1,52) ≈ 4h57m = le jeu) ;
@@ -29,17 +31,21 @@
     return y / (y + m);
   }
 
-  // Profit (en COIN) d'UN cycle de production = prix_out*0.975*output − coût des inputs (yield-ajusté).
+  // Profit (en COIN) d'UN cycle de production = prix_out*sf*output − coût des inputs (yield-ajusté)*bf.
   // recipe : { output, input1, input1_amount, input2, input2_amount, yield_pct }
   // priceOut : prix COIN de la ressource produite ; getPrice : (symbol) => prix COIN de l'input
   // mastery : bonus de Mastery EN POURCENTAGE (s'ajoute au yield du niveau ; 0 par défaut)
   // Retourne null si non calculable (recette/prix/output manquants).
-  // sellFactor : part encaissée à la vente = 1 − taxe (0.975 par défaut, soit 2.5 % de taxe).
-  function profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor) {
+  // sellFactor : part encaissée à la vente = 1 − taxe_vente (0.975 par défaut, soit 2.5 % de taxe).
+  //              Vaut 1 si l'output n'est PAS vendu (consommé par une recette en aval) : pas de vente, pas de taxe.
+  // buyFactor  : part payée à l'achat = 1 + taxe_achat (1 par défaut = inputs non achetés, donc non taxés).
+  //              Les taxes sont des frais réels prélevés sur une transaction : pas de transaction, pas de frais.
+  function profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor, buyFactor) {
     if (!recipe) return null;
     const B = recipe.output;
     if (priceOut == null || !B) return null;
     const sf = (sellFactor == null ? 0.975 : sellFactor);
+    const bf = (buyFactor == null ? 1 : buyFactor);
     const yf = yieldFactor(recipe.yield_pct, mastery);   // yield (niveau + mastery) -> réduit la conso d'inputs
     let cost = 0;
     const inputs = [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]];
@@ -47,7 +53,7 @@
       if (sym && amt) {
         const pin = getPrice(sym);
         if (pin == null) return null;       // prix d'un input manquant -> non calculable
-        cost += amt * yf * pin;
+        cost += amt * yf * pin * bf;
       }
     }
     return priceOut * sf * B - cost;        // = D * B (D = marge par unité de l'Excel col D)
@@ -55,8 +61,8 @@
 
   // coin/h : profit par cycle ramené à l'heure, avec les bonus de VITESSE.
   // bonus : Speed bonus Workshop (0 par défaut). Retourne null si non calculable.
-  function coinPerHour(recipe, priceOut, getPrice, bonus, mastery, sellFactor) {
-    const ppc = profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor);
+  function coinPerHour(recipe, priceOut, getPrice, bonus, mastery, sellFactor, buyFactor) {
+    const ppc = profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor, buyFactor);
     const hours = durationHours(recipe && recipe.duration);
     if (ppc == null || hours == null) return null;
     return ppc / hours * 2 * (1 + (bonus || 0));   // *2 = bonus vidéo +100 % ; *(1+bonus) = Speed Workshop
@@ -65,8 +71,8 @@
   // coin/kpower : coins par 1000 de power dépensé (Excel col W = D*B / V, V = power/1000).
   // Indépendant de la vitesse (le power est consommé par cycle). recipe.power = coût power (Game Data).
   // Retourne null si non calculable (profit indéfini ou power absent/nul).
-  function coinPerKPower(recipe, priceOut, getPrice, mastery, sellFactor) {
-    const ppc = profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor);
+  function coinPerKPower(recipe, priceOut, getPrice, mastery, sellFactor, buyFactor) {
+    const ppc = profitPerCycle(recipe, priceOut, getPrice, mastery, sellFactor, buyFactor);
     const power = recipe && recipe.power;
     if (ppc == null || !power) return null;
     return ppc * 1000 / power;

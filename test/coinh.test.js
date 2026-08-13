@@ -133,3 +133,41 @@ test('non calculable -> null', () => {
   assert.strictEqual(coinPerHour({ ...r, duration: '0' }, 10, prices({ WATER: 3 }), 0), null, 'durée nulle');
   assert.strictEqual(coinPerHour({ ...r, output: 0 }, 10, prices({ WATER: 3 }), 0), null, 'output nul');
 });
+
+// ── Taxes achat/vente indépendantes (besoin #28) ────────────────────────────────
+// Les taxes sont des frais réels prélevés sur une transaction : pas de transaction, pas de frais.
+// sellFactor = 1 − taxe_vente si l'output est vendu, 1 sinon ; buyFactor = 1 + taxe_achat si les
+// inputs sont achetés, 1 sinon. Recette type SEAWATER : j'achète WATER, je vends (ou non) SEAWATER.
+test('buyFactor : taxe d\'achat appliquée au coût des inputs', () => {
+  const r = { output: 30, duration: '8:00:00', input1: 'WATER', input1_amount: 160 };
+  const p = prices({ WATER: 3 });
+  // Achat ✓ / Vente ✓ : 10*0.975*30 − 160*3*1.025
+  near(profitPerCycle(r, 10, p, 0, 0.975, 1.025), 10 * 0.975 * 30 - 160 * 3 * 1.025);
+  // Achat ✗ / Vente ✓ : inputs produits soi-même, aucune taxe dessus
+  near(profitPerCycle(r, 10, p, 0, 0.975, 1), 10 * 0.975 * 30 - 160 * 3);
+  // Achat ✓ / Vente ✗ : output consommé en aval, aucune taxe de vente
+  near(profitPerCycle(r, 10, p, 0, 1, 1.025), 10 * 30 - 160 * 3 * 1.025);
+  // Achat ✗ / Vente ✗ : palier intermédiaire, marge brute sans aucune taxe
+  near(profitPerCycle(r, 10, p, 0, 1, 1), 10 * 30 - 160 * 3);
+});
+
+test('buyFactor par défaut = 1 (inputs non taxés si non précisé)', () => {
+  const r = { output: 30, duration: '8:00:00', input1: 'WATER', input1_amount: 160 };
+  const p = prices({ WATER: 3 });
+  near(profitPerCycle(r, 10, p, 0, 0.975), profitPerCycle(r, 10, p, 0, 0.975, 1));
+});
+
+test('buyFactor se propage à coinPerHour et coinPerKPower', () => {
+  const r = { output: 30, duration: '8:00:00', input1: 'WATER', input1_amount: 160, power: 25000 };
+  const p = prices({ WATER: 3 });
+  const ppc = profitPerCycle(r, 10, p, 0, 0.975, 1.025);
+  near(coinPerHour(r, 10, p, 0, 0, 0.975, 1.025), ppc / 8 * 2);
+  near(coinPerKPower(r, 10, p, 0, 0.975, 1.025), ppc * 1000 / 25000);
+  // Une taxe d'achat plus forte réduit le profit (les inputs coûtent plus cher).
+  assert.ok(coinPerHour(r, 10, p, 0, 0, 0.975, 1.05) < coinPerHour(r, 10, p, 0, 0, 0.975, 1.025));
+});
+
+test('taxe d\'achat sans input : aucun effet (rien à acheter)', () => {
+  const r = { output: 1, duration: '15:00:00', input1: null, input2: null };
+  near(coinPerHour(r, 1, prices({}), 0.52, 0, 0.975, 1.025), 0.1976);
+});

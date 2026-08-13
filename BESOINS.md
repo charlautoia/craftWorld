@@ -251,3 +251,24 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           PowerPlant (besoin #24) : 25 niveaux / 2 familles affichés d'un coup, bouton « À plat » pour revenir
           à la vue par famille (sélecteur réactivé).
         - `python build_data.py` régénère aussi `data.json.batteries` désormais.
+
+28. [x] **Taxe d'achat + cases Achat/Vente par ressource** (onglet Prix, colonnes après Speed bonus).
+        - **Principe** : les taxes sont des **frais réels prélevés sur une transaction** — pas de transaction,
+          pas de frais. (Modèle choisi par l'user, ≠ coût d'opportunité : une ressource produite puis consommée
+          en aval n'est ni achetée ni vendue, donc n'est taxée d'aucun côté.)
+        - **Champ « Taxe achat % »** à côté de « Taxe vente % » (défaut 2,5 %, persisté `cw_buytax`).
+          Le vrai taux côté acheteur du jeu n'est pas confirmé — l'user ajustera.
+        - **Case Achat** = j'achète les **inputs** de cette recette au marché → `coût_input × (1 + taxe_achat)`.
+          « — » si la recette n'a pas d'input. Défaut **coché uniquement** si un input n'a aucune recette
+          (donc impossible à produire) : SEAWATER←WATER, HEAT←FIRE, SALT←FIRE, PAPERWRAP/BOOK←DUST.
+        - **Case Vente** = je vends l'**output** au marché → `prix_out × (1 − taxe_vente)`. Défaut coché.
+          Décochée = output consommé par une recette en aval, donc aucune taxe de vente.
+        - Les 4 combinaisons sont valides et distinctes ; « Achat ✗ + Vente ✗ » = palier purement
+          intermédiaire (marge brute sans aucune taxe).
+        - `coinh.js` : `profitPerCycle` prend un 6e param **`buyFactor`** (défaut 1 = rétro-compatible),
+          appliqué à `amt * yf * pin`. Propagé à `coinPerHour` (7e param) et `coinPerKPower` (6e param).
+        - `app.js` : `buyFlag`/`sellFlag` (persistés `cw_buy`/`cw_sell`), `sellFactorFor(name)`/`buyFactorFor(name)`
+          remplacent l'ancien `sellFactor()` global (supprimé). Utilisés par l'onglet Prix **et** l'onglet Crafting
+          (où `sf`/`bf` sont désormais calculés par ligne, plus une seule fois hors boucle).
+        - **Non touché** : Up Cost / UpCost (Crafting, PowerPlant, Batteries) et le coin/kpow des centrales
+          restent au prix brut, sans taxe d'achat.
