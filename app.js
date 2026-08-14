@@ -381,6 +381,7 @@ function renderCrafting() {
       <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
       <td class="font-mono">${fmt(l.output, 0)}</td>
       <td>${fmtVar(l.production_change_pct)}</td>
+      <td class="font-mono text-slate-300">${l.yield_pct == null ? '—' : fmt(l.yield_pct, 2) + ' %'}</td>
       <td class="font-mono text-slate-300">${l.duration ?? '—'}</td>
       <td class="text-sky-300">${l.input1 ?? '—'}</td>
       <td class="font-mono">${fmt(l.input1_amount, 2)}</td>

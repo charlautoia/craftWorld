@@ -399,3 +399,15 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           `GLAS` = GLASS **et** GLASSKEY. Seule l'infobulle les distingue. (DYNAMITE/DYNOKEY passent :
           `DYNA` vs `DYNO` ; STEEL/STEAM aussi : `STEE` vs `STEA`.)
         - Largeur du tableau : 1216 px → 1063 px (−153). Au-delà, le conteneur reste en `overflow-x-auto`.
+
+39. [x] **Colonne Yield** (onglet Crafting, juste après **Δ Prod**).
+        - Affiche `yield_pct` (Game Data `YIELD`), déjà présent dans `data.json` depuis le besoin #13 —
+          il servait au calcul (il réduit la quantité d'inputs) mais n'était pas visible.
+        - Placée après Δ Prod à dessein : les deux mesurent ce qu'apporte un niveau, mais sur des axes
+          différents. Ex. SEAWATER 1→5 : Δ Prod reste à 0 % (même output, même durée) alors que le
+          **yield double de 100 % à 200 %**, faisant tomber la conso de 16 à 8 WATER. Un niveau à
+          Δ Prod = 0 n'est donc pas un niveau inutile — la colonne Yield le rend enfin lisible.
+        - `—` pour les 50 niveaux d'**EARTH**, seule recette sans input : rien à économiser, donc pas
+          de yield dans le Game Data.
+        - Infobulle sur l'en-tête : rendement du niveau, la Mastery s'y **ajoute** dans le calcul du coin/h.
+        - Ordre Crafting : … | Output | Δ Prod | **Yield** | Durée | Input 1 | … (18 colonnes en vue à plat).
