@@ -369,3 +369,14 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           « 17 étapes » annoncées après achat de FIBERGLASS.
         - Les lignes achetées sont **atténuées** (opacity .5) : elles ne font plus partie de la chaîne,
           mais leurs chiffres restent lisibles pour voir l'économie de production à laquelle on renonce.
+
+36. [x] **Onglet Chaînes : tableau moins large + niveau modifiable.**
+        - En-têtes raccourcis : **Ressource → Res**, **Niveau → Niv**, **Acheter → Buy** (les `th` sont en
+          `white-space: nowrap`, donc le libellé fixait la largeur mini de la colonne). Le sens complet
+          est conservé dans les infobulles. Le tableau ne déborde plus de son conteneur.
+        - **Niveau d'usine modifiable** ici aussi (sélecteur, comme dans l'onglet Prix) : `levelCell(n)`
+          dans `renderChains`, câblée sur le **même** `onLevelChange` — donc le même état `factoryLevel`,
+          la même persistance `cw_levels`, et les deux onglets restent synchronisés.
+        - `onLevelChange` rafraîchit désormais `renderRenta()` **et** `renderChains()`.
+        - Vérifié : SEAWATER 30 → 20 fait passer sa ligne de 5,65 à −25,6 de coin/h et propage l'effet
+          en aval (OIL 102 → 46,5), le niveau se relit dans l'onglet Prix.

@@ -104,7 +104,8 @@ function onBuyTaxChange(val) { buyTaxPct = +val; try { localStorage.setItem(LS_B
 function onBuyChange(name, checked) { buyFlag[name] = checked; saveLS(LS_BUY, buyFlag); renderRenta(); }
 function onSellChange(name, checked) { sellFlag[name] = checked; saveLS(LS_SELL, sellFlag); renderRenta(); }
 
-function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); }
+// Le niveau est éditable depuis l'onglet Prix ET l'onglet Chaînes : on rafraîchit les deux.
+function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); renderChains(); }
 function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
 function onBonusChange(name, val) { bonusPct[name] = +val; saveLS(LS_BONUS, bonusPct); renderRenta(); }
 
@@ -653,13 +654,22 @@ function renderChains() {
   const signCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+  // Niveau d'usine modifiable ici aussi (même état que l'onglet Prix, donc même handler).
+  const levelCell = n => {
+    const levels = DATA.crafting[n] || [];
+    if (!levels.length) return '—';
+    const opts = levels.map(l =>
+      `<option value="${l.level}"${l.level === factoryLevel[n] ? ' selected' : ''}>${l.level}</option>`).join('');
+    return `<select onchange="onLevelChange('${n}', this.value)"
+       class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
+  };
 
   document.getElementById('chains-body').innerHTML = names.map(name => {
     const m = CoinH.chainMetrics(name, ctx);
     const steps = chainSteps(name, ctx).length;
     if (!m) return `<tr>
       <td class="font-semibold text-white">${name}</td>
-      <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
@@ -674,7 +684,7 @@ function renderChains() {
     const dim = boughtFlag[name] ? ' style="opacity:.5"' : '';
     return `<tr${dim}>
       <td class="font-semibold text-white">${name}</td>
-      <td><span class="badge bg-indigo-900 text-indigo-300">${factoryLevel[name] ?? '—'}</span></td>
+      <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>
       <td>${signCell(m.coinKPow)}</td>
