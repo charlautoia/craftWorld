@@ -654,6 +654,9 @@ function renderChains() {
   const signCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
+  // Nom tronqué à 4 caractères pour garder le tableau étroit ; nom complet en infobulle.
+  // NB : deux couples se confondent à 4 lettres — CERAMICS/CERAMICKEY et GLASS/GLASSKEY.
+  const shortName = n => `<span title="${n}">${String(n).slice(0, 4)}</span>`;
   // Niveau d'usine modifiable ici aussi (même état que l'onglet Prix, donc même handler).
   const levelCell = n => {
     const levels = DATA.crafting[n] || [];
@@ -668,7 +671,7 @@ function renderChains() {
     const m = CoinH.chainMetrics(name, ctx);
     const steps = chainSteps(name, ctx).length;
     if (!m) return `<tr>
-      <td class="font-semibold text-white">${name}</td>
+      <td class="font-semibold text-white">${shortName(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
@@ -677,13 +680,13 @@ function renderChains() {
     // colonne affichée est exactement celle qui a servi au calcul de la marge.
     // Goulot : rouge si c'est l'usine de la ligne elle-même, sinon c'est une étape amont.
     const gl = m.bottleneck === name
-      ? `<span class="text-rose-300">${m.bottleneck}</span>`
-      : `<span class="text-slate-400">${m.bottleneck ?? '—'}</span>`;
+      ? `<span class="text-rose-300">${shortName(m.bottleneck)}</span>`
+      : `<span class="text-slate-400">${m.bottleneck ? shortName(m.bottleneck) : '—'}</span>`;
     // Ligne achetée : atténuée, car elle ne fait plus partie de la chaîne — ses chiffres restent
     // affichés pour montrer l'économie de production à laquelle on renonce.
     const dim = boughtFlag[name] ? ' style="opacity:.5"' : '';
     return `<tr${dim}>
-      <td class="font-semibold text-white">${name}</td>
+      <td class="font-semibold text-white">${shortName(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>

@@ -387,3 +387,15 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `app.js` : tableau `order` de `showTab` réordonné (il mappe l'index du bouton vers le nom d'onglet).
         - Vérifié : au chargement Chaînes est ouvert et surligné ; pour chacun des 5 onglets, une seule
           zone visible et le bon bouton allumé ; les boutons « À plat » gardent leur état.
+
+38. [x] **Noms de ressources tronqués à 4 caractères** (onglet Chaînes uniquement).
+        - `shortName(n)` dans `renderChains` : affiche `n.slice(0, 4)` avec le **nom complet en infobulle**.
+          Appliqué à la colonne **Res** (ligne normale et ligne « prix manquant ») **et** à la colonne
+          **Goulot**, qui affiche elle aussi des noms de ressources.
+        - Les autres onglets (Prix, Crafting, PowerPlant, Batteries) gardent les noms complets : le motif
+          `<td class="font-semibold text-white">${name}</td>` y est identique, l'édition a donc dû être
+          ciblée sur les seules lignes de `renderChains`.
+        - **Limite connue — 2 collisions** sur les 34 ressources : `CERA` = CERAMICS **et** CERAMICKEY,
+          `GLAS` = GLASS **et** GLASSKEY. Seule l'infobulle les distingue. (DYNAMITE/DYNOKEY passent :
+          `DYNA` vs `DYNO` ; STEEL/STEAM aussi : `STEE` vs `STEA`.)
+        - Largeur du tableau : 1216 px → 1063 px (−153). Au-delà, le conteneur reste en `overflow-x-auto`.
