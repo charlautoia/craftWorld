@@ -380,3 +380,10 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - `onLevelChange` rafraîchit désormais `renderRenta()` **et** `renderChains()`.
         - Vérifié : SEAWATER 30 → 20 fait passer sa ligne de 5,65 à −25,6 de coin/h et propage l'effet
           en aval (OIL 102 → 46,5), le niveau se relit dans l'onglet Prix.
+
+37. [x] **Onglet Chaînes placé en premier**, devant Prix (ordre : Chaînes | Prix | Crafting | PowerPlant | Batteries).
+        - `index.html` : bouton Chaînes déplacé en tête et porteur de `active` ; `#tab-chains` visible au
+          chargement, `#tab-renta` passe en `hidden`.
+        - `app.js` : tableau `order` de `showTab` réordonné (il mappe l'index du bouton vers le nom d'onglet).
+        - Vérifié : au chargement Chaînes est ouvert et surligné ; pour chacun des 5 onglets, une seule
+          zone visible et le bon bouton allumé ; les boutons « À plat » gardent leur état.

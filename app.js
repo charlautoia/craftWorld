@@ -28,7 +28,7 @@ function showTab(tab) {
   document.getElementById('tab-batteries').classList.toggle('hidden', tab !== 'batteries');
   document.getElementById('tab-chains').classList.toggle('hidden', tab !== 'chains');
   // #tabs : uniquement les onglets de navigation (les boutons « À plat » portent aussi .tab-btn).
-  const order = ['renta', 'crafting', 'powerplant', 'batteries', 'chains'];
+  const order = ['chains', 'renta', 'crafting', 'powerplant', 'batteries'];
   document.querySelectorAll('#tabs .tab-btn').forEach((b, i) => b.classList.toggle('active', order[i] === tab));
   if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
   if (tab === 'powerplant') renderPowerPlant();
