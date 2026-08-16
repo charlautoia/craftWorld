@@ -413,9 +413,9 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Ordre Crafting : … | Output | Δ Prod | **Yield** | Durée | Input 1 | … (18 colonnes en vue à plat).
 
 40. [x] **Favicon** — icône dans l'onglet du navigateur.
-        - `favicon.svg` (479 octets) : cube isométrique à 3 faces (une ressource) en dégradé d'indigo
-          sur fond `#0f172a`, coins arrondis — mêmes couleurs que la page.
-        - `index.html` : `<link rel="icon" type="image/svg+xml" href="favicon.svg">` + `<meta name="theme-color">`.
-        - Format SVG choisi plutôt qu'un `.ico` : un seul fichier, net à toutes les tailles, éditable au
-          texte. Supporté par Chrome/Firefox/Edge et Safari ≥ 16.4 (au-delà, l'onglet reste sans icône).
-        - Vérifié servi en 200 avec `content-type: image/svg+xml`, SVG valide et rastérisé par le navigateur.
+        - `favicon.png` (90×90, 16 Ko) : **l'icône officielle du jeu**, fournie par l'user.
+        - `index.html` : `<link rel="icon" type="image/png">` + `<link rel="apple-touch-icon">` +
+          `<meta name="theme-color" content="#0f172a">`.
+        - *(Un `favicon.svg` maison — cube isométrique indigo — avait d'abord été créé puis remplacé
+          par l'icône du jeu, et le fichier supprimé.)*
+        - Vérifié servi en 200 avec `content-type: image/png` et rastérisé par le navigateur.
