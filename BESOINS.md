@@ -411,3 +411,11 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           de yield dans le Game Data.
         - Infobulle sur l'en-tête : rendement du niveau, la Mastery s'y **ajoute** dans le calcul du coin/h.
         - Ordre Crafting : … | Output | Δ Prod | **Yield** | Durée | Input 1 | … (18 colonnes en vue à plat).
+
+40. [x] **Favicon** — icône dans l'onglet du navigateur.
+        - `favicon.svg` (479 octets) : cube isométrique à 3 faces (une ressource) en dégradé d'indigo
+          sur fond `#0f172a`, coins arrondis — mêmes couleurs que la page.
+        - `index.html` : `<link rel="icon" type="image/svg+xml" href="favicon.svg">` + `<meta name="theme-color">`.
+        - Format SVG choisi plutôt qu'un `.ico` : un seul fichier, net à toutes les tailles, éditable au
+          texte. Supporté par Chrome/Firefox/Edge et Safari ≥ 16.4 (au-delà, l'onglet reste sans icône).
+        - Vérifié servi en 200 avec `content-type: image/svg+xml`, SVG valide et rastérisé par le navigateur.
