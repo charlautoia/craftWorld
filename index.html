@@ -229,20 +229,6 @@
         class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
       <span class="text-slate-500 text-sm" id="chains-info"></span>
     </div>
-    <p class="text-xs text-slate-500 mb-3">
-      Chaîne remontée automatiquement depuis les recettes jusqu'aux matières sans recette (achetées).
-      Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
-      vente sur la ressource de la ligne. <b>Prix net</b> = cours du marché moins la taxe de vente,
-      c'est-à-dire ce que tu encaisses réellement — donc <b>Marge/u = Prix net − Coût mat.</b>
-      Coche <b>Buy</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
-      là et son prix d'achat remplace son coût de production.
-      <span class="text-rose-400">⚠ rosé</span> = la ressource est <b>moins chère à acheter qu'à produire</b>
-      (prix d'achat &lt; Coût mat.) : coche Buy. <span class="text-emerald-400">★ vert</span> = <b>à vendre</b> :
-      aucune transformation en aval ne rapporte plus, et la produire ajoute de la valeur. Une ressource
-      sans ★ vaut mieux être transformée plus loin, ou ne pas être produite du tout — survole la ligne
-      pour savoir lequel des deux cas.
-      Débit et goulot calculés avec <b>une usine par étape</b>.
-    </p>
     <div class="rounded-xl overflow-hidden border border-slate-700">
       <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
         <table id="chains-table">
@@ -267,6 +253,20 @@
         </table>
       </div>
     </div>
+    <p class="text-xs text-slate-500 mt-3">
+      Chaîne remontée automatiquement depuis les recettes jusqu'aux matières sans recette (achetées).
+      Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
+      vente sur la ressource de la ligne. <b>Prix net</b> = cours du marché moins la taxe de vente,
+      c'est-à-dire ce que tu encaisses réellement — donc <b>Marge/u = Prix net − Coût mat.</b>
+      Coche <b>Buy</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
+      là et son prix d'achat remplace son coût de production.
+      <span class="text-rose-400">⚠ rosé</span> = la ressource est <b>moins chère à acheter qu'à produire</b>
+      (prix d'achat &lt; Coût mat.) : coche Buy. <span class="text-emerald-400">★ vert</span> = <b>à vendre</b> :
+      aucune transformation en aval ne rapporte plus, et la produire ajoute de la valeur. Une ressource
+      sans ★ vaut mieux être transformée plus loin, ou ne pas être produite du tout — survole la ligne
+      pour savoir lequel des deux cas.
+      Débit et goulot calculés avec <b>une usine par étape</b>.
+    </p>
   </div>
 </div>
 

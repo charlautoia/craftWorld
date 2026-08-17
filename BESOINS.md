@@ -525,3 +525,12 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           `CURRENT_LEVELS`) et le jeu utilise un **stock commun** — OIL et ACID se disputent donc
           réellement le même FUEL, et la suggestion est fondée. Le problème était de la formuler dans
           une vue où ACID est invisible : d'où le lien plutôt qu'un changement de modèle.
+
+48. [x] **Textes explicatifs placés SOUS le tableau** — convention pour tous les onglets.
+        - Motif : sur mobile (375 px), le paragraphe de l'onglet Chaînes occupait presque tout l'écran
+          avant que le tableau n'apparaisse. Le tableau est la raison d'être de la page, il doit venir
+          en premier ; l'explication se lit une fois, pas à chaque visite.
+        - Seul l'onglet Chaînes en avait un : déplacé après le conteneur du tableau, `mb-3` → `mt-3`.
+        - **Règle à suivre pour tout futur texte d'aide** : sous le tableau, jamais au-dessus.
+        - Vérifié en 375 px : tableau visible dans le premier écran, paragraphe en dessous, pas de
+          défilement horizontal de la page.
