@@ -500,3 +500,15 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - **Limite connue** : le modèle reste « une usine par étape » et ne répartit pas un flux entre
           plusieurs débouchés (vendre 77 % du FUEL + convertir 23 % en ACID). Le ★ dit quoi vendre,
           pas dans quelles proportions.
+
+46. [x] **« Aucune étape à vendre » remplacé par une redirection nommée.**
+        - **Problème** : sur la chaîne d'OIL, aucune ★ n'apparaissait et l'info disait « aucune étape à
+          vendre en l'état » — ce qui se lit comme « vends OIL » ou « rien à faire ». Le débouché réel
+          (ACID) est une **branche sœur** : il consomme le FUEL comme OIL, mais n'est pas un ancêtre
+          d'OIL, donc il n'apparaît jamais dans la chaîne affichée.
+        - `sellPlan` retourne désormais **`dest`** = la ressource finalement **vendue** pour réaliser la
+          meilleure valeur (propagée en remontant : le débouché de GAS comme de FUEL est ACID).
+        - Barre d'info sans ★ : « ★ rien à vendre ici : **dérive ton FUEL vers ACID** » — on nomme
+          l'étape utile la plus avancée de la chaîne et sa destination.
+        - Infobulle des lignes sans ★ enrichie du débouché : « la transformer vaut 391/unité contre 260
+          à la vente — débouché : ACID ».

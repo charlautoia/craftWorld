@@ -249,28 +249,31 @@
     for (const n of names) {
       for (const i of inputsOf(n)) (consumers[i.name] = consumers[i.name] || []).push({ output: n, qty: i.qty });
     }
+    // Retourne { v, dest } : la meilleure valeur d'une unité, et la ressource finalement VENDUE pour
+    // la réaliser (n lui-même si le mieux est de le vendre tel quel).
     const memo = {};
     const value = (n, stack) => {
       if (n in memo) return memo[n];
-      if (stack.indexOf(n) >= 0) return marginOf(n);          // garde-fou : graphe supposé acyclique
-      let best = marginOf(n);
+      if (stack.indexOf(n) >= 0) return { v: marginOf(n), dest: n };   // garde-fou : graphe acyclique
+      let best = { v: marginOf(n), dest: n };
       for (const c of (consumers[n] || [])) {
-        let net = value(c.output, stack.concat(n));
+        const sub = value(c.output, stack.concat(n));
+        let net = sub.v;
         for (const o of inputsOf(c.output)) if (o.name !== n) net -= o.qty * marginOf(o.name);
         const per = net / c.qty;                              // ramené à une unité de n
-        if (per > best) best = per;
+        if (per > best.v) best = { v: per, dest: sub.dest };
       }
       return (memo[n] = best);
     };
     const plan = {};
     for (const n of names) {
       const m = metricsOf(n);
-      if (!m) { plan[n] = { value: null, sell: false, addsValue: false }; continue; }
+      if (!m) { plan[n] = { value: null, dest: null, sell: false, addsValue: false }; continue; }
       let inputsValue = 0;
       for (const i of inputsOf(n)) inputsValue += i.qty * marginOf(i.name);
       const addsValue = m.margin > inputsValue;               // l'étape crée-t-elle de la valeur ?
-      const v = value(n, []);
-      plan[n] = { value: v, addsValue, sell: addsValue && v <= m.margin + 1e-9 };
+      const b = value(n, []);
+      plan[n] = { value: b.v, dest: b.dest, addsValue, sell: addsValue && b.v <= m.margin + 1e-9 };
     }
     return plan;
   }

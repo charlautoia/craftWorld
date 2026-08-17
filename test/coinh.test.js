@@ -418,3 +418,23 @@ test('sellPlan : un maillon intermédiaire déficitaire ne bloque pas la vue en 
   assert.strictEqual(plan.M.sell, false, 'M se transforme, il ne se vend pas');
   assert.strictEqual(plan.F.sell, true);
 });
+
+test('sellPlan : `dest` nomme la ressource finalement vendue', () => {
+  // G -> F -> {OIL (destructeur), ACID (créateur, avec S)}. Le débouché de F et G est ACID.
+  const recipes = {
+    G:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    F:    { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
+    S:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    OIL:  { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, power: 100 },
+    ACID: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, input2: 'S', input2_amount: 2, power: 100 },
+  };
+  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, S: 5, OIL: 44, ACID: 100 });
+  const met = {};
+  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
+  const plan = sellPlan(['G','F','S','OIL','ACID'], ctx, metricsOf);
+  assert.strictEqual(plan.ACID.dest, 'ACID', 'ACID se vend lui-même');
+  assert.strictEqual(plan.F.dest, 'ACID', 'le débouché de F est ACID, pas OIL');
+  assert.strictEqual(plan.G.dest, 'ACID', 'et il se propage en amont');
+  assert.strictEqual(plan.OIL.sell, false);
+  assert.strictEqual(plan.OIL.addsValue, false, 'OIL detruit de la valeur');
+});

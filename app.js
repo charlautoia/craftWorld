@@ -670,10 +670,20 @@ function renderChains() {
     const steps = chainSteps(sel, ctx);            // décompte réel : achats déduits
     const buy = steps.filter(cheaperToBuy);
     const stars = steps.filter(isStar);
-    const p = plan[sel] || {};
+    // Aucune ★ ici ne veut PAS dire « vends la ressource choisie » : le débouché est souvent une
+    // branche sœur, absente de cette chaîne (le FUEL part vers ACID, qui n'est pas un ancêtre d'OIL).
+    // On nomme donc l'étape à dériver et sa destination.
+    let redirect = '';
+    if (!stars.length) {
+      const usable = steps.filter(n => (plan[n] || {}).addsValue);
+      const from = usable[usable.length - 1];               // étape utile la plus avancée
+      const dest = from && (plan[from] || {}).dest;
+      redirect = dest && dest !== from
+        ? ` — ★ rien à vendre ici : dérive ton ${from} vers ${dest}`
+        : ' — ★ rien à vendre ici';
+    }
     info.textContent = `${steps.length} étapes jusqu'à ${sel}`
-      + (stars.length ? ` — ★ vendre : ${stars.join(', ')}`
-         : (p.value != null && !p.sell ? ` — ★ aucune étape à vendre en l'état` : ''))
+      + (stars.length ? ` — ★ vendre : ${stars.join(', ')}` : redirect)
       + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   }
 
@@ -741,7 +751,7 @@ function renderChains() {
     const p = plan[name] || {};
     const hint = (best || bought || !p.value) ? ''
       : p.addsValue
-        ? ` title="Ne pas vendre : la transformer en aval vaut ${fmtPrice(p.value)}/unité contre ${fmtPrice(m.margin)} à la vente."`
+        ? ` title="Ne pas vendre : la transformer vaut ${fmtPrice(p.value)}/unité contre ${fmtPrice(m.margin)} à la vente${p.dest && p.dest !== name ? ` — débouché : ${p.dest}` : ''}."`
         : ` title="Étape qui détruit de la valeur : vendre ses inputs rapporte plus que ${fmtPrice(m.margin)}/unité."`;
     return `<tr${trAttr}${hint}>
       <td class="font-semibold text-white">${flag}${shortName(name)}</td>
