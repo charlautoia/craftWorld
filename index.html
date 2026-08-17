@@ -34,6 +34,10 @@
   .drag-handle { cursor: grab; touch-action: none; user-select: none; color: #64748b; padding: 0 .35rem 0 0; }
   .drag-handle:active { cursor: grabbing; color: #818cf8; }
   tr.dragging td { opacity: .55; background: #334155; }
+  /* Onglet Chaînes : usine déficitaire qu'on produit quand même (pas cochée « Buy »). */
+  tr.warn td { background: rgba(244, 63, 94, .13); }
+  tr.warn:hover td { background: rgba(244, 63, 94, .24); }
+  tr.warn td:first-child { box-shadow: inset 3px 0 0 #f43f5e; }
 </style>
 </head>
 <body class="min-h-screen p-4">
@@ -227,9 +231,10 @@
       Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
       vente sur la ressource de la ligne. <b>Prix net</b> = cours du marché moins la taxe de vente,
       c'est-à-dire ce que tu encaisses réellement — donc <b>Marge/u = Prix net − Coût mat.</b>
-      Coche <b>Acheter</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
-      là et son prix d'achat remplace son coût de production. Débit et goulot calculés avec
-      <b>une usine par étape</b>.
+      Coche <b>Buy</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
+      là et son prix d'achat remplace son coût de production. Une ligne <span class="text-rose-400">rosée
+      ⚠</span> signale une usine <b>produite à perte alors qu'elle n'est pas achetée</b> — candidate au Buy.
+      Débit et goulot calculés avec <b>une usine par étape</b>.
     </p>
     <div class="rounded-xl overflow-hidden border border-slate-700">
       <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">

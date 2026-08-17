@@ -419,3 +419,19 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - *(Un `favicon.svg` maison — cube isométrique indigo — avait d'abord été créé puis remplacé
           par l'icône du jeu, et le fichier supprimé.)*
         - Vérifié servi en 200 avec `content-type: image/png` et rastérisé par le navigateur.
+
+41. [x] **Alerte usine déficitaire** (onglet Chaînes) — code couleur + info agrégée.
+        - Une ligne est marquée (**fond rosé, liseré rouge à gauche, ⚠ devant le nom**) quand elle est
+          **produite à perte** (`margin < 0`) **et pas cochée Buy** : c'est une candidate au Buy.
+          Une ligne achetée n'est jamais marquée (le problème est traité) — elle reste atténuée.
+        - Critère : `margin < 0` suffit, car **coin/h et coin/kpow ont toujours le même signe que la
+          marge** (ce sont la marge multipliée par le débit / par 1000÷power, tous deux positifs).
+        - **Barre d'info** : en vue à plat, `N ressources — ⚠ k produites à perte : …` ; en vue par
+          chaîne, `N étapes jusqu'à X — ⚠ k à perte : …`. Répond au cas signalé (« le dernier est
+          négatif, ex. OIL ») comme aux étapes intermédiaires.
+        - En vue par chaîne, seules les étapes **réellement dans la chaîne** sont signalées : celles en
+          amont d'une étape achetée restent affichées (pour pouvoir la décocher, cf. #35) mais ne la
+          nourrissent plus. Sans ça, le décompte de l'info et le nombre de ⚠ divergeaient
+          (DYNAMITE après achat de FIBERGLASS : info « 4 » vs 8 lignes marquées).
+        - Vérifié : aucun oubli ni faux positif en vue à plat (12/32 marquées), et cocher FIBERGLASS
+          fait tomber DYNAMITE de 10 à 4 alertes, info et marquage concordants.
