@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics, sellPlan } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -362,4 +362,59 @@ test('chainMetrics.stepMargin : null si le prix d\'un input manque', () => {
   const f = chainMetrics('F', mkCtx(recipes, { A: 10, F: 100 }));   // pas de prix pour M
   assert.strictEqual(f.stepMargin, null, 'non jugeable sans le prix de M');
   near(f.margin, 100 - 60);                                          // la chaîne reste calculable
+});
+
+// ── Plan de vente (besoin #45) ──────────────────────────────────────────────────
+// Cas réel : FUEL est le meilleur palier de sa propre chaîne, mais le convertir en ACID rapporte
+// davantage. La ★ doit aller sur ACID, pas sur FUEL.
+test('sellPlan : ★ sur le produit final quand la conversion ajoute de la valeur', () => {
+  const recipes = {
+    G:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    F:    { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
+    S:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    ACID: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, input2: 'S', input2_amount: 2, power: 100 },
+  };
+  const names = ['G','F','S','ACID'];
+  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, S: 5, ACID: 100 });
+  const met = {};
+  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
+  const plan = sellPlan(names, ctx, metricsOf);
+  // marges de chaîne : G 9, F 28, S 4, ACID 94 (coûts matières 1, 2, 1, 6)
+  near(metricsOf('F').margin, 28); near(metricsOf('ACID').margin, 94);
+  // convertir 2 F + 2 S (2*28 + 2*4 = 64) en 1 ACID (94) ajoute 30 -> ACID est la sortie
+  assert.strictEqual(plan.ACID.sell, true, 'ACID se vend');
+  assert.strictEqual(plan.F.sell, false, 'F vaut mieux être transformé en ACID');
+  assert.strictEqual(plan.S.sell, false, 'S non plus');
+  assert.strictEqual(plan.G.sell, false, 'G alimente F');
+  assert.ok(plan.F.value > metricsOf('F').margin, 'la valeur aval de F dépasse sa marge de vente');
+});
+
+test('sellPlan : pas de ★ sur une étape qui détruit de la valeur', () => {
+  // OIL : 2 FUEL (2*28 = 56) donnent un OIL qui ne vaut que 40 -> ne pas produire OIL, vendre FUEL.
+  const recipes = {
+    G:   { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    F:   { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
+    OIL: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, power: 100 },
+  };
+  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, OIL: 44 });
+  const met = {};
+  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
+  const plan = sellPlan(['G','F','OIL'], ctx, metricsOf);
+  assert.strictEqual(plan.OIL.addsValue, false, 'OIL détruit de la valeur');
+  assert.strictEqual(plan.OIL.sell, false, 'donc pas de ★ sur OIL');
+  assert.strictEqual(plan.F.sell, true, 'c\'est F qu\'il faut vendre');
+});
+
+test('sellPlan : un maillon intermédiaire déficitaire ne bloque pas la vue en aval', () => {
+  // M perd de la valeur seul, mais la chaîne A->M->F reste la bonne route : ni M ni A ne prennent la ★.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 1, power: 100 },
+  };
+  const ctx = mkCtx(recipes, { A: 1, M: 1.5, F: 60 });
+  const met = {};
+  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
+  const plan = sellPlan(['M','F'], ctx, metricsOf);
+  assert.strictEqual(plan.M.sell, false, 'M se transforme, il ne se vend pas');
+  assert.strictEqual(plan.F.sell, true);
 });

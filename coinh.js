@@ -217,8 +217,67 @@
     };
   }
 
+  // ── Plan de vente ───────────────────────────────────────────────────────────
+  // Que faire d'une unité de chaque ressource : la vendre, ou la transformer plus loin ?
+  // Les chaînes (chainMetrics) regardent en AMONT ; ici on regarde en AVAL, ce qui est la seule façon
+  // de voir qu'il vaut mieux convertir son FUEL en ACID que de le vendre.
+  //   names      : ressources produisibles ; metricsOf(n) : chainMetrics(n), mémoïsé par l'appelant.
+  //   value(n)   : meilleure valeur tirée d'une unité de n = sa marge de vente, ou ce que rapporte sa
+  //                transformation en aval. Les CO-inputs d'une recette sont valorisés à leur marge de
+  //                vente (et non à leur propre `value`) : ça évite une dépendance circulaire entre deux
+  //                inputs d'une même recette (FUEL et SCREWS pour ACID s'attendraient mutuellement).
+  //   sell[n]    : la vendre est sa meilleure issue ET la produire ajoute de la valeur par rapport à la
+  //                vente de ses propres inputs. C'est ce qui mérite une ★.
+  function sellPlan(names, ctx, metricsOf) {
+    const set = new Set(names);
+    const marginOf = n => {                     // matière achetée : aucune vente à laquelle renoncer
+      if (!set.has(n)) return 0;
+      const m = metricsOf(n);
+      return m ? m.margin : 0;
+    };
+    const inputsOf = n => {                     // quantités par unité produite, yield/Mastery compris
+      const r = ctx.recipeOf(n);
+      if (!r || !r.output) return [];
+      const yf = yieldFactor(r.yield_pct, ctx.masteryOf(n));
+      const out = [];
+      for (const [s, a] of [[r.input1, r.input1_amount], [r.input2, r.input2_amount]]) {
+        if (s && a) out.push({ name: s, qty: a * yf / r.output });
+      }
+      return out;
+    };
+    const consumers = {};                       // graphe AVAL : input -> recettes qui le consomment
+    for (const n of names) {
+      for (const i of inputsOf(n)) (consumers[i.name] = consumers[i.name] || []).push({ output: n, qty: i.qty });
+    }
+    const memo = {};
+    const value = (n, stack) => {
+      if (n in memo) return memo[n];
+      if (stack.indexOf(n) >= 0) return marginOf(n);          // garde-fou : graphe supposé acyclique
+      let best = marginOf(n);
+      for (const c of (consumers[n] || [])) {
+        let net = value(c.output, stack.concat(n));
+        for (const o of inputsOf(c.output)) if (o.name !== n) net -= o.qty * marginOf(o.name);
+        const per = net / c.qty;                              // ramené à une unité de n
+        if (per > best) best = per;
+      }
+      return (memo[n] = best);
+    };
+    const plan = {};
+    for (const n of names) {
+      const m = metricsOf(n);
+      if (!m) { plan[n] = { value: null, sell: false, addsValue: false }; continue; }
+      let inputsValue = 0;
+      for (const i of inputsOf(n)) inputsValue += i.qty * marginOf(i.name);
+      const addsValue = m.margin > inputsValue;               // l'étape crée-t-elle de la valeur ?
+      const v = value(n, []);
+      plan[n] = { value: v, addsValue, sell: addsValue && v <= m.margin + 1e-9 };
+    }
+    return plan;
+  }
+
   return {
     durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost,
     powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics,
+    sellPlan,
   };
 });

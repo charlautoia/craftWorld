@@ -477,3 +477,26 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - **Perf** : `chainMetrics` repart d'une mémoïsation vierge à chaque appel et il est désormais
           invoqué pour chaque ligne, chaque `bestStopOf` et la barre d'info → cache `mcache` local au
           rendu. Rendu complet des 32 lignes en ~10 ms.
+
+45. [x] **★ = « à vendre », calculé en regardant l'AVAL** (remplace le ★ « meilleur coin/h de la chaîne »).
+        - **Problème** : le ★ classait les étapes d'une chaîne sur le coin/h, donc il tombait sur FUEL.
+          Or convertir le FUEL en **ACID** rapporte davantage (92,6 coin/h contre 82,9 en vendant FUEL
+          et SCREWS), parce que l'usine ACID est lente et n'absorbe que ~23 % de la production de FUEL :
+          elle **s'ajoute** à la vente de FUEL au lieu de la remplacer. `chainMetrics` ne pouvait pas le
+          voir : il ne regarde qu'en **amont**.
+        - `coinh.js` : **`sellPlan(names, ctx, metricsOf)`** construit le graphe **aval** (input → recettes
+          qui le consomment) et calcule `value(n)` = meilleure valeur d'une unité de n, soit sa marge de
+          vente, soit ce que rapporte sa transformation en aval (récursif, mémoïsé, garde-fou anti-cycle).
+          `sell[n]` = la vendre est sa meilleure issue **ET** la produire ajoute de la valeur par rapport
+          à la vente de ses propres inputs — c'est ce qui reçoit la ★.
+        - **Approximation assumée** : les **co-inputs** d'une recette sont valorisés à leur marge de vente
+          et non à leur propre `value`, sinon FUEL et SCREWS (les deux inputs d'ACID) s'attendraient
+          mutuellement — dépendance circulaire. Les deux concluent quand même « faire de l'ACID ».
+        - La double condition évite deux pièges : OIL n'a rien en aval mais **détruit de la valeur**
+          (pas de ★), et ALGAE est rentable seul mais vaut bien plus transformé (pas de ★ non plus).
+        - Infobulle sur les lignes sans ★ : « la transformer en aval vaut X/unité contre Y à la vente »
+          ou « étape qui détruit de la valeur ». Aux prix du jour, ★ sur 5 ressources seulement :
+          ACID, CEMENT, LAVA, HYDROGEN, DYNOKEY (au lieu de 14 avec l'ancien critère).
+        - **Limite connue** : le modèle reste « une usine par étape » et ne répartit pas un flux entre
+          plusieurs débouchés (vendre 77 % du FUEL + convertir 23 % en ACID). Le ★ dit quoi vendre,
+          pas dans quelles proportions.
