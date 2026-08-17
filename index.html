@@ -34,10 +34,13 @@
   .drag-handle { cursor: grab; touch-action: none; user-select: none; color: #64748b; padding: 0 .35rem 0 0; }
   .drag-handle:active { cursor: grabbing; color: #818cf8; }
   tr.dragging td { opacity: .55; background: #334155; }
-  /* Onglet Chaînes : usine déficitaire qu'on produit quand même (pas cochée « Buy »). */
+  /* Onglet Chaînes : ⚠ moins chère à acheter qu'à produire ; ★ meilleur point de vente. */
   tr.warn td { background: rgba(244, 63, 94, .13); }
   tr.warn:hover td { background: rgba(244, 63, 94, .24); }
   tr.warn td:first-child { box-shadow: inset 3px 0 0 #f43f5e; }
+  tr.best td { background: rgba(16, 185, 129, .12); }
+  tr.best:hover td { background: rgba(16, 185, 129, .22); }
+  tr.best td:first-child { box-shadow: inset 3px 0 0 #10b981; }
 </style>
 </head>
 <body class="min-h-screen p-4">
@@ -232,9 +235,11 @@
       vente sur la ressource de la ligne. <b>Prix net</b> = cours du marché moins la taxe de vente,
       c'est-à-dire ce que tu encaisses réellement — donc <b>Marge/u = Prix net − Coût mat.</b>
       Coche <b>Buy</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
-      là et son prix d'achat remplace son coût de production. Une ligne <span class="text-rose-400">rosée
-      ⚠</span> signale une usine dont l'<b>étape seule</b> tourne à perte — ses inputs achetés au marché
-      coûtent plus que son <b>Prix net</b> — même si la chaîne complète reste bénéficiaire. Candidate au Buy.
+      là et son prix d'achat remplace son coût de production.
+      <span class="text-rose-400">⚠ rosé</span> = la ressource est <b>moins chère à acheter qu'à produire</b>
+      (prix d'achat &lt; Coût mat.) : coche Buy. <span class="text-emerald-400">★ vert</span> = <b>meilleur
+      coin/h de la chaîne</b>, c'est là qu'il faut vendre ; les étapes au-delà rapportent moins.
+      Un maillon intermédiaire peu rentable n'est pas signalé : il reste un passage obligé vers l'étape ★.
       Débit et goulot calculés avec <b>une usine par étape</b>.
     </p>
     <div class="rounded-xl overflow-hidden border border-slate-700">

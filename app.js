@@ -636,25 +636,38 @@ function renderChains() {
     ? DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name)
     : chainSteps(sel, displayCtx);
 
-  // Usines dont l'ÉTAPE SEULE est déficitaire (inputs achetés > prix net) et non cochées Buy.
-  // En vue par chaîne on ne compte que les étapes réelles (chainSteps exclut déjà les achetées).
-  const losing = ns => ns.filter(n => {
+  // Seul signal ACTIONNABLE : acheter la ressource revient moins cher que la produire.
+  // (Une étape « mince » — marge d'étape négative — n'est PAS un signal : un intermédiaire comme
+  //  OXYGEN est un passage obligé vers GAS, l'arrêter casserait la chaîne.)
+  const cheaperToBuy = n => {
     if (boughtFlag[n]) return false;
-    const mm = CoinH.chainMetrics(n, ctx);
-    return mm && mm.stepMargin != null && mm.stepMargin < 0;
-  });
+    const mm = CoinH.chainMetrics(n, ctx), p = priceByName(n);
+    return !!mm && p != null && p * ctx.buyFactor < mm.cost;
+  };
   // Étapes réellement dans la chaîne (null en vue à plat, où chaque ligne est sa propre racine).
   const chainSet = chainsFlat ? null : new Set(chainSteps(sel, ctx));
+  // Meilleur point de vente de la chaîne = coin/h max parmi les étapes réelles. Repère POSITIF :
+  // il montre où s'arrêter, plutôt que de crier au loup sur les maillons obligatoires en amont.
+  let bestStep = null;
+  if (!chainsFlat) {
+    let bestVal = -Infinity;
+    for (const n of chainSet) {
+      const mm = CoinH.chainMetrics(n, ctx);
+      if (mm && mm.coinH > bestVal) { bestVal = mm.coinH; bestStep = n; }
+    }
+  }
+
   const info = document.getElementById('chains-info');
   if (chainsFlat) {
-    const bad = losing(names);
+    const buy = names.filter(cheaperToBuy);
     info.textContent = `${names.length} ressources`
-      + (bad.length ? ` — ⚠ ${bad.length} produites à perte : ${bad.join(', ')}` : '');
+      + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   } else {
     const steps = chainSteps(sel, ctx);            // décompte réel : achats déduits
-    const bad = losing(steps);
+    const buy = steps.filter(cheaperToBuy);
     info.textContent = `${steps.length} étapes jusqu'à ${sel}`
-      + (bad.length ? ` — ⚠ ${bad.length} à perte : ${bad.join(', ')}` : '');
+      + (bestStep ? ` — ★ vendre à ${bestStep}` : '')
+      + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   }
 
   const wait = '<span class="spin neutral">⟳</span>';
@@ -702,18 +715,21 @@ function renderChains() {
       : `<span class="text-slate-400">${m.bottleneck ? shortName(m.bottleneck) : '—'}</span>`;
     // Ligne achetée : atténuée, car elle ne fait plus partie de la chaîne — ses chiffres restent
     // affichés pour montrer l'économie de production à laquelle on renonce.
-    // Sinon : alerte si l'USINE SEULE tourne à perte, c'est-à-dire si ses inputs achetés au marché
-    // coûtent plus que son prix net (m.stepMargin < 0) — le rendement que montre l'onglet Prix.
-    // Indépendant de la chaîne : OIL peut être bénéficiaire en chaîne (amont produit maison) tout en
-    // étant déficitaire seul. C'est ce cas-là qu'on veut voir.
-    // En vue par chaîne, on ne signale que les étapes réellement dans la chaîne : celles situées en
-    // amont d'une étape achetée restent affichées (pour pouvoir la décocher) mais ne la nourrissent plus.
+    // Deux repères, tous deux ACTIONNABLES :
+    //  ⚠ = l'acheter revient moins cher que la produire -> coche Buy ;
+    //  ★ = meilleur coin/h de la chaîne -> c'est là qu'il faut vendre.
+    // On ne signale PAS les étapes « minces » (marge d'étape négative) : un intermédiaire obligatoire
+    // comme OXYGEN le serait à tort, alors qu'il faut continuer jusqu'à l'étape ★.
+    // En vue par chaîne, seules les étapes réellement dans la chaîne comptent : celles en amont d'une
+    // étape achetée restent affichées (pour pouvoir la décocher) mais ne la nourrissent plus.
     const bought = !!boughtFlag[name];
-    const warn = !bought && m.stepMargin != null && m.stepMargin < 0 && (!chainSet || chainSet.has(name));
-    const trAttr = bought ? ' style="opacity:.5"' : (warn ? ' class="warn"' : '');
+    const inChain = !chainSet || chainSet.has(name);
+    const warn = !bought && inChain && cheaperToBuy(name);
+    const best = !bought && name === bestStep;
+    const trAttr = bought ? ' style="opacity:.5"' : (warn ? ' class="warn"' : (best ? ' class="best"' : ''));
     const flag = warn
-      ? `<span class="text-rose-400" title="Usine à perte : inputs achetés ${fmtPrice(m.directCost)} pour un prix net de ${fmtPrice(m.margin + m.cost)}, soit ${fmtPrice(m.stepMargin)}/unité. Envisage de cocher Buy.">⚠ </span>`
-      : '';
+      ? `<span class="text-rose-400" title="Moins chère à acheter : ${fmtPrice(priceByName(name) * ctx.buyFactor)} au marché contre ${fmtPrice(m.cost)} à produire. Coche Buy.">⚠ </span>`
+      : (best ? `<span class="text-emerald-400" title="Meilleur coin/h de la chaîne (${fmtPrice(m.coinH)}) : c'est ici qu'il faut vendre.">★ </span>` : '');
     return `<tr${trAttr}>
       <td class="font-semibold text-white">${flag}${shortName(name)}</td>
       <td>${levelCell(name)}</td>

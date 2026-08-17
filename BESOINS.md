@@ -449,3 +449,17 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           *Achat* de la ressource est cochée, alors que `stepMargin` l'applique toujours (dans une chaîne,
           l'input vient forcément du marché si on n'en produit pas). Sur OIL : −190 sans la taxe (ce que
           montre l'onglet Prix) contre −274 avec. Le signe est le même, l'ordre de grandeur diffère.
+
+43. [x] **Refonte des indicateurs (remplace #41/#42)** — ne signaler que ce sur quoi on peut AGIR.
+        - **Problème** : le ⚠ portait sur la « marge d'étape » (`stepMargin < 0`), qui marquait ALGAE et
+          OXYGEN. Or ce sont des **passages obligés** vers GAS/FUEL : les arrêter casserait la chaîne, et
+          les acheter coûte plus cher que les produire. L'indicateur poussait donc à une mauvaise décision.
+        - **⚠ rosé** = `prix d'achat × (1 + taxe) < Coût mat.` : la ressource est **moins chère à acheter
+          qu'à produire** → coche Buy. Seul cas où une action est justifiée. Aux prix du jour : 5 sur 32
+          (GLASS, HEAT, STEAM, FIBERGLASS, DYNAMITE) au lieu des 22 signalées à tort par #42.
+        - **★ vert** = **meilleur coin/h de la chaîne** → c'est là qu'il faut vendre. Repère positif qui
+          répond à la question « où m'arrêter ? » sans alarmer sur les maillons en amont. Sur la chaîne
+          OIL aux prix du jour : ★ sur **FUEL** (81,2 coin/h) et rien sur OIL (69,4) — l'étape finale
+          est visiblement en retrait, ce qui était le besoin initial.
+        - `stepMargin` (ajouté au #42) reste calculé et testé dans `coinh.js` mais ne pilote plus l'affichage.
+        - Barre d'info : `N étapes jusqu'à X — ★ vendre à Y — ⚠ k moins chères à acheter : …`.
