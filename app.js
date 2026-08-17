@@ -618,6 +618,14 @@ function chainSteps(name, ctx, seen, stack, asInput) {
 
 function onBoughtChange(name, checked) { boughtFlag[name] = checked; saveLS(LS_BOUGHT, boughtFlag); renderChains(); }
 
+// Saut vers la chaîne d'une autre ressource (depuis le débouché nommé dans la barre d'info) :
+// le débouché est une branche sœur, donc invisible dans la chaîne courante — on y emmène l'user.
+function onChainJump(name) {
+  if (chainsFlat) toggleChainsFlat();          // le sélecteur est désactivé en vue à plat
+  document.getElementById('chains-select').value = name;
+  renderChains();
+}
+
 function toggleChainsFlat() {
   chainsFlat = !chainsFlat;
   document.getElementById('chains-flat-btn').classList.toggle('active', chainsFlat);
@@ -660,11 +668,13 @@ function renderChains() {
   const info = document.getElementById('chains-info');
   // Une ressource moins chère à acheter ne peut pas être « à vendre » : le ⚠ prime, comme sur la ligne.
   const isStar = n => !boughtFlag[n] && !cheaperToBuy(n) && !!(plan[n] || {}).sell;
+  const chainLink = n => `<a href="#" onclick="onChainJump('${n}');return false"
+     class="text-indigo-300 hover:underline">${n}</a>`;
   if (chainsFlat) {
     const buy = names.filter(cheaperToBuy);
     const stars = names.filter(isStar);
-    info.textContent = `${names.length} ressources`
-      + (stars.length ? ` — ★ ${stars.length} à vendre : ${stars.join(', ')}` : '')
+    info.innerHTML = `${names.length} ressources — clique un nom pour voir sa chaîne`
+      + (stars.length ? ` — ★ ${stars.length} à vendre : ${stars.map(chainLink).join(', ')}` : '')
       + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   } else {
     const steps = chainSteps(sel, ctx);            // décompte réel : achats déduits
@@ -679,10 +689,10 @@ function renderChains() {
       const from = usable[usable.length - 1];               // étape utile la plus avancée
       const dest = from && (plan[from] || {}).dest;
       redirect = dest && dest !== from
-        ? ` — ★ rien à vendre ici : dérive ton ${from} vers ${dest}`
+        ? ` — ★ rien à vendre ici : dérive ton ${from} vers ${chainLink(dest)}`
         : ' — ★ rien à vendre ici';
     }
-    info.textContent = `${steps.length} étapes jusqu'à ${sel}`
+    info.innerHTML = `${steps.length} étapes jusqu'à ${sel}`
       + (stars.length ? ` — ★ vendre : ${stars.join(', ')}` : redirect)
       + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   }
@@ -705,6 +715,11 @@ function renderChains() {
   // Nom tronqué à 4 caractères pour garder le tableau étroit ; nom complet en infobulle.
   // NB : deux couples se confondent à 4 lettres — CERAMICS/CERAMICKEY et GLASS/GLASSKEY.
   const shortName = n => `<span title="${n}">${String(n).slice(0, 4)}</span>`;
+  // Colonne Res : en vue à plat, cliquer ouvre le détail de la chaîne de cette ressource.
+  const resCell = n => chainsFlat
+    ? `<a href="#" onclick="onChainJump('${n}');return false"
+         class="hover:underline decoration-dotted" title="${n} — voir le détail de sa chaîne">${String(n).slice(0, 4)}</a>`
+    : shortName(n);
   // Niveau d'usine modifiable ici aussi (même état que l'onglet Prix, donc même handler).
   const levelCell = n => {
     const levels = DATA.crafting[n] || [];
@@ -754,7 +769,7 @@ function renderChains() {
         ? ` title="Ne pas vendre : la transformer vaut ${fmtPrice(p.value)}/unité contre ${fmtPrice(m.margin)} à la vente${p.dest && p.dest !== name ? ` — débouché : ${p.dest}` : ''}."`
         : ` title="Étape qui détruit de la valeur : vendre ses inputs rapporte plus que ${fmtPrice(m.margin)}/unité."`;
     return `<tr${trAttr}${hint}>
-      <td class="font-semibold text-white">${flag}${shortName(name)}</td>
+      <td class="font-semibold text-white">${flag}${resCell(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>

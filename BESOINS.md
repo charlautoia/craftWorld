@@ -512,3 +512,16 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           l'étape utile la plus avancée de la chaîne et sa destination.
         - Infobulle des lignes sans ★ enrichie du débouché : « la transformer vaut 391/unité contre 260
           à la vente — débouché : ACID ».
+
+47. [x] **Navigation par clic dans l'onglet Chaînes.**
+        - Vue à plat (par défaut) : le **nom de la ressource est un lien** qui ouvre le détail de sa
+          chaîne (bascule en vue par chaîne + positionne le sélecteur). `resCell(n)` remplace
+          `shortName(n)` dans la colonne Res ; la colonne Goulot reste en texte simple.
+        - Le **débouché nommé** dans la barre d'info est lui aussi cliquable (`chainLink`) : depuis la
+          chaîne d'OIL, « dérive ton FUEL vers **ACID** » emmène directement sur la chaîne d'ACID.
+          Idem pour la liste des ★ en vue à plat. `onChainJump(name)` gère la bascule.
+        - **Contexte** : l'user contestait la suggestion inter-chaînes (« je n'ai que des usines Oil,
+          l'acide n'existe pas »). Vérification faite, il **possède** bien l'usine ACID (niveau 4 dans
+          `CURRENT_LEVELS`) et le jeu utilise un **stock commun** — OIL et ACID se disputent donc
+          réellement le même FUEL, et la suggestion est fondée. Le problème était de la formuler dans
+          une vue où ACID est invisible : d'où le lien plutôt qu'un changement de modèle.
