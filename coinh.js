@@ -217,70 +217,35 @@
     };
   }
 
-  // ── Plan de vente ───────────────────────────────────────────────────────────
-  // Que faire d'une unité de chaque ressource : la vendre, ou la transformer plus loin ?
-  // Les chaînes (chainMetrics) regardent en AMONT ; ici on regarde en AVAL, ce qui est la seule façon
-  // de voir qu'il vaut mieux convertir son FUEL en ACID que de le vendre.
-  //   names      : ressources produisibles ; metricsOf(n) : chainMetrics(n), mémoïsé par l'appelant.
-  //   value(n)   : meilleure valeur tirée d'une unité de n = sa marge de vente, ou ce que rapporte sa
-  //                transformation en aval. Les CO-inputs d'une recette sont valorisés à leur marge de
-  //                vente (et non à leur propre `value`) : ça évite une dépendance circulaire entre deux
-  //                inputs d'une même recette (FUEL et SCREWS pour ACID s'attendraient mutuellement).
-  //   sell[n]    : la vendre est sa meilleure issue ET la produire ajoute de la valeur par rapport à la
-  //                vente de ses propres inputs. C'est ce qui mérite une ★.
-  function sellPlan(names, ctx, metricsOf) {
-    const set = new Set(names);
-    const marginOf = n => {                     // matière achetée : aucune vente à laquelle renoncer
-      if (!set.has(n)) return 0;
-      const m = metricsOf(n);
-      return m ? m.margin : 0;
-    };
-    const inputsOf = n => {                     // quantités par unité produite, yield/Mastery compris
-      const r = ctx.recipeOf(n);
-      if (!r || !r.output) return [];
-      const yf = yieldFactor(r.yield_pct, ctx.masteryOf(n));
-      const out = [];
-      for (const [s, a] of [[r.input1, r.input1_amount], [r.input2, r.input2_amount]]) {
-        if (s && a) out.push({ name: s, qty: a * yf / r.output });
-      }
-      return out;
-    };
-    const consumers = {};                       // graphe AVAL : input -> recettes qui le consomment
-    for (const n of names) {
-      for (const i of inputsOf(n)) (consumers[i.name] = consumers[i.name] || []).push({ output: n, qty: i.qty });
+  // Valeur ajoutée par la DERNIÈRE étape : vendre une unité de `name` rapporte-t-il plus que vendre
+  // les inputs qu'elle consomme ? C'est la réponse à « dois-je faire du X ? », et elle ne sort jamais
+  // de la chaîne — chaque chaîne reste une boîte noire.
+  // Comparer les coin/h de deux paliers serait faux : ça suppose de cadencer toute la chaîne sur le
+  // palier le plus lent, alors qu'une usine lente (ACID, 50 h) n'absorbe qu'une fraction de l'amont
+  // et s'ajoute à la vente du reste. La comparaison à quantité d'inputs égale est la bonne.
+  // Un input acheté (sans recette, ou coché Buy) vaut 0 : l'utiliser ne fait renoncer à aucune vente.
+  // Retourne { added, forgone, inputs:[{name, qty, margin}] } ou null si non calculable.
+  function stepValueAdd(name, ctx, metricsOf) {
+    const m = metricsOf(name), r = ctx.recipeOf(name);
+    if (!m || !r || !r.output) return null;
+    const yf = yieldFactor(r.yield_pct, ctx.masteryOf(name));
+    const inputs = [];
+    let forgone = 0;
+    for (const [s, a] of [[r.input1, r.input1_amount], [r.input2, r.input2_amount]]) {
+      if (!s || !a) continue;
+      const qty = a * yf / r.output;
+      const produced = !!ctx.recipeOf(s) && !(ctx.boughtOf && ctx.boughtOf(s));
+      const sub = produced ? metricsOf(s) : null;
+      const margin = sub ? sub.margin : 0;
+      inputs.push({ name: s, qty, margin });
+      forgone += qty * margin;
     }
-    // Retourne { v, dest } : la meilleure valeur d'une unité, et la ressource finalement VENDUE pour
-    // la réaliser (n lui-même si le mieux est de le vendre tel quel).
-    const memo = {};
-    const value = (n, stack) => {
-      if (n in memo) return memo[n];
-      if (stack.indexOf(n) >= 0) return { v: marginOf(n), dest: n };   // garde-fou : graphe acyclique
-      let best = { v: marginOf(n), dest: n };
-      for (const c of (consumers[n] || [])) {
-        const sub = value(c.output, stack.concat(n));
-        let net = sub.v;
-        for (const o of inputsOf(c.output)) if (o.name !== n) net -= o.qty * marginOf(o.name);
-        const per = net / c.qty;                              // ramené à une unité de n
-        if (per > best.v) best = { v: per, dest: sub.dest };
-      }
-      return (memo[n] = best);
-    };
-    const plan = {};
-    for (const n of names) {
-      const m = metricsOf(n);
-      if (!m) { plan[n] = { value: null, dest: null, sell: false, addsValue: false }; continue; }
-      let inputsValue = 0;
-      for (const i of inputsOf(n)) inputsValue += i.qty * marginOf(i.name);
-      const addsValue = m.margin > inputsValue;               // l'étape crée-t-elle de la valeur ?
-      const b = value(n, []);
-      plan[n] = { value: b.v, dest: b.dest, addsValue, sell: addsValue && b.v <= m.margin + 1e-9 };
-    }
-    return plan;
+    return { added: m.margin - forgone, forgone, inputs };
   }
 
   return {
     durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost,
     powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics,
-    sellPlan,
+    stepValueAdd,
   };
 });

@@ -534,3 +534,21 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - **Règle à suivre pour tout futur texte d'aide** : sous le tableau, jamais au-dessus.
         - Vérifié en 375 px : tableau visible dans le premier écran, paragraphe en dessous, pas de
           défilement horizontal de la page.
+
+49. [x] **Verdict « dois-je faire du X ? » — chaque chaîne redevient une BOÎTE NOIRE** (annule #45/#46).
+        - Besoin exprimé : la chaîne d'OIL ne sert qu'à répondre *dois-je produire de l'OIL ?*, **d'un
+          coup d'œil**, sans jamais raisonner d'une chaîne à l'autre (l'user gère la vision d'ensemble).
+        - **`sellPlan` supprimé** (graphe aval, débouché inter-chaînes, redirection « dérive ton FUEL vers
+          ACID ») ainsi que ses tests : rendu inutile par ce choix.
+        - **Le bon critère n'est PAS de comparer les coin/h de deux paliers** : ça suppose de cadencer
+          toute la chaîne sur le palier le plus lent. Une usine lente (ACID, cycle 50 h) n'absorbe qu'une
+          fraction de l'amont et s'ajoute à la vente du reste — comparer 30 et 81 coin/h concluait à tort
+          « ne fais pas d'ACID ».
+        - `coinh.js` : **`stepValueAdd(name, ctx, metricsOf)`** compare **à quantité d'inputs égale** —
+          vendre une unité de X rapporte-t-il plus que vendre les inputs qu'elle a consommés ?
+          `added = margin(X) − Σ qté_i × margin(input_i)`. Un input acheté (sans recette ou coché Buy)
+          compte pour 0 : l'utiliser ne fait renoncer à aucune vente.
+        - **Verdict en tête de l'onglet**, badge vert/rouge : « ✔ FAIS DU ACID — +241 par unité vs vendre
+          FUEL et SCREWS » ou « ✘ NE FAIS PAS DE OIL — −94,6 par unité, vends ton FUEL à la place ».
+          La ★ suit le verdict : sur la ressource si elle vaut le coup, sinon sur l'input à vendre.
+        - Vue à plat : ★ sur les 18 ressources dont l'étape finale crée de la valeur.

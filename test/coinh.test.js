@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics, sellPlan } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics, stepValueAdd } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -364,77 +364,67 @@ test('chainMetrics.stepMargin : null si le prix d\'un input manque', () => {
   near(f.margin, 100 - 60);                                          // la chaîne reste calculable
 });
 
-// ── Plan de vente (besoin #45) ──────────────────────────────────────────────────
-// Cas réel : FUEL est le meilleur palier de sa propre chaîne, mais le convertir en ACID rapporte
-// davantage. La ★ doit aller sur ACID, pas sur FUEL.
-test('sellPlan : ★ sur le produit final quand la conversion ajoute de la valeur', () => {
+// ── stepValueAdd : « dois-je faire du X ? » (besoin #49) ────────────────────────
+// Comparaison à quantité d'inputs égale, interne à la chaîne : vendre une unité de X rapporte-t-il
+// plus que vendre les inputs qu'elle a consommés ?
+const mkMetrics = (recipes, ctx) => {
+  const cache = {};
+  return n => (n in cache ? cache[n] : (cache[n] = chainMetrics(n, ctx)));
+};
+
+test('stepValueAdd : étape gagnante (cas ACID) malgré un coin/h plus faible', () => {
+  // ACID : 2 F + 2 S -> 1 ACID. Son usine est LENTE (10 h contre 1 h), donc son coin/h de chaîne est
+  // bien plus bas que celui de F — pourtant convertir crée de la valeur.
   const recipes = {
-    G:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    F:    { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
+    F:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
     S:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    ACID: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, input2: 'S', input2_amount: 2, power: 100 },
+    ACID: { output: 1, duration: '10:00:00', input1: 'F', input1_amount: 2, input2: 'S', input2_amount: 2, power: 100 },
   };
-  const names = ['G','F','S','ACID'];
-  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, S: 5, ACID: 100 });
-  const met = {};
-  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
-  const plan = sellPlan(names, ctx, metricsOf);
-  // marges de chaîne : G 9, F 28, S 4, ACID 94 (coûts matières 1, 2, 1, 6)
-  near(metricsOf('F').margin, 28); near(metricsOf('ACID').margin, 94);
-  // convertir 2 F + 2 S (2*28 + 2*4 = 64) en 1 ACID (94) ajoute 30 -> ACID est la sortie
-  assert.strictEqual(plan.ACID.sell, true, 'ACID se vend');
-  assert.strictEqual(plan.F.sell, false, 'F vaut mieux être transformé en ACID');
-  assert.strictEqual(plan.S.sell, false, 'S non plus');
-  assert.strictEqual(plan.G.sell, false, 'G alimente F');
-  assert.ok(plan.F.value > metricsOf('F').margin, 'la valeur aval de F dépasse sa marge de vente');
+  const ctx = mkCtx(recipes, { A: 1, F: 30, S: 5, ACID: 100 });
+  const metricsOf = mkMetrics(recipes, ctx);
+  // marges de chaîne : F 29, S 4, ACID 96 (coût matières 1, 1, 4)
+  const va = stepValueAdd('ACID', ctx, metricsOf);
+  near(va.forgone, 2 * 29 + 2 * 4);                  // 66 : ce qu'on renonce à vendre
+  near(va.added, 96 - 66);                           // +30 -> il FAUT faire de l'ACID
+  assert.ok(va.added > 0);
+  // ... alors que le coin/h de sa chaîne est bien plus faible que celui de F
+  assert.ok(metricsOf('ACID').coinH < metricsOf('F').coinH, 'coin/h trompeur ici');
 });
 
-test('sellPlan : pas de ★ sur une étape qui détruit de la valeur', () => {
-  // OIL : 2 FUEL (2*28 = 56) donnent un OIL qui ne vaut que 40 -> ne pas produire OIL, vendre FUEL.
+test('stepValueAdd : étape perdante (cas OIL)', () => {
   const recipes = {
-    G:   { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    F:   { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
+    F:   { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
     OIL: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, power: 100 },
   };
-  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, OIL: 44 });
-  const met = {};
-  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
-  const plan = sellPlan(['G','F','OIL'], ctx, metricsOf);
-  assert.strictEqual(plan.OIL.addsValue, false, 'OIL détruit de la valeur');
-  assert.strictEqual(plan.OIL.sell, false, 'donc pas de ★ sur OIL');
-  assert.strictEqual(plan.F.sell, true, 'c\'est F qu\'il faut vendre');
+  const ctx = mkCtx(recipes, { A: 1, F: 30, OIL: 50 });
+  const metricsOf = mkMetrics(recipes, ctx);
+  const va = stepValueAdd('OIL', ctx, metricsOf);
+  near(va.forgone, 2 * 29);                          // 58 : deux F qu'on aurait pu vendre
+  near(va.added, 48 - 58);                           // −10 -> ne pas faire d'OIL
+  assert.ok(va.added < 0);
+  assert.strictEqual(va.inputs[0].name, 'F');
 });
 
-test('sellPlan : un maillon intermédiaire déficitaire ne bloque pas la vue en aval', () => {
-  // M perd de la valeur seul, mais la chaîne A->M->F reste la bonne route : ni M ni A ne prennent la ★.
-  const recipes = {
+test('stepValueAdd : un input acheté ne fait renoncer à aucune vente', () => {
+  // A n'a pas de recette : l'utiliser ne prive d'aucune vente, sa marge compte pour 0.
+  const recipes = { F: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 } };
+  const ctx = mkCtx(recipes, { A: 1, F: 30 });
+  const va = stepValueAdd('F', ctx, mkMetrics(recipes, ctx));
+  near(va.forgone, 0);
+  near(va.added, 29);
+  // Idem si l'input est produit mais coché « Buy ».
+  const recipes2 = {
     M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 1, power: 100 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 2, power: 100 },
   };
-  const ctx = mkCtx(recipes, { A: 1, M: 1.5, F: 60 });
-  const met = {};
-  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
-  const plan = sellPlan(['M','F'], ctx, metricsOf);
-  assert.strictEqual(plan.M.sell, false, 'M se transforme, il ne se vend pas');
-  assert.strictEqual(plan.F.sell, true);
+  const ctx2 = mkCtx(recipes2, { A: 1, M: 5, F: 30 }); ctx2.boughtOf = n => n === 'M';
+  const va2 = stepValueAdd('F', ctx2, mkMetrics(recipes2, ctx2));
+  near(va2.forgone, 0, 1e-9);
 });
 
-test('sellPlan : `dest` nomme la ressource finalement vendue', () => {
-  // G -> F -> {OIL (destructeur), ACID (créateur, avec S)}. Le débouché de F et G est ACID.
-  const recipes = {
-    G:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    F:    { output: 1, duration: '1:00:00', input1: 'G', input1_amount: 2, power: 100 },
-    S:    { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 },
-    OIL:  { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, power: 100 },
-    ACID: { output: 1, duration: '1:00:00', input1: 'F', input1_amount: 2, input2: 'S', input2_amount: 2, power: 100 },
-  };
-  const ctx = mkCtx(recipes, { A: 1, G: 10, F: 30, S: 5, OIL: 44, ACID: 100 });
-  const met = {};
-  const metricsOf = n => (n in met ? met[n] : (met[n] = chainMetrics(n, ctx)));
-  const plan = sellPlan(['G','F','S','OIL','ACID'], ctx, metricsOf);
-  assert.strictEqual(plan.ACID.dest, 'ACID', 'ACID se vend lui-même');
-  assert.strictEqual(plan.F.dest, 'ACID', 'le débouché de F est ACID, pas OIL');
-  assert.strictEqual(plan.G.dest, 'ACID', 'et il se propage en amont');
-  assert.strictEqual(plan.OIL.sell, false);
-  assert.strictEqual(plan.OIL.addsValue, false, 'OIL detruit de la valeur');
+test('stepValueAdd : null si non calculable', () => {
+  const recipes = { F: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 1, power: 100 } };
+  const ctx = mkCtx(recipes, {});
+  assert.strictEqual(stepValueAdd('F', ctx, mkMetrics(recipes, ctx)), null, 'prix manquants');
+  assert.strictEqual(stepValueAdd('A', mkCtx(recipes, { A: 1, F: 30 }), mkMetrics(recipes, mkCtx(recipes, { A: 1, F: 30 }))), null, 'A n\'a pas de recette');
 });

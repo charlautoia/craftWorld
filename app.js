@@ -659,42 +659,52 @@ function renderChains() {
   };
   // Étapes réellement dans la chaîne (null en vue à plat, où chaque ligne est sa propre racine).
   const chainSet = chainsFlat ? null : new Set(chainSteps(sel, ctx));
-  // Plan de vente : ★ sur ce qu'il faut VENDRE. Regarde en AVAL (ce que la ressource peut devenir),
-  // là où chainMetrics ne regarde qu'en amont — seule façon de voir qu'il vaut mieux convertir son
-  // FUEL en ACID que de le vendre, même si FUEL est le meilleur coin/h de sa propre chaîne.
-  const produced = DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name);
-  const plan = CoinH.sellPlan(produced, ctx, metrics);
+  // Chaque chaîne est une BOÎTE NOIRE : on ne raisonne jamais d'une chaîne à l'autre. Le ★ désigne
+  // le meilleur coin/h PARMI LES ÉTAPES DE CETTE CHAÎNE, donc l'endroit où s'arrêter et vendre.
+  // Valeur ajoutée par l'étape finale (mémoïsée) : « faire X » rapporte-t-il plus que vendre ses inputs ?
+  const vaCache = {};
+  const valueAdd = n => (n in vaCache ? vaCache[n] : (vaCache[n] = CoinH.stepValueAdd(n, ctx, metrics)));
+  const worthMaking = n => { const v = valueAdd(n); return !!v && v.added > 0; };
+  // Dans une chaîne dont l'étape finale ne vaut pas le coup, la ★ va sur l'input qu'il faut vendre.
+  const starOfChain = () => {
+    const v = valueAdd(sel);
+    if (!v) return null;
+    if (v.added > 0) return sel;
+    const best = v.inputs.filter(i => i.margin > 0).sort((a, b) => b.margin - a.margin)[0];
+    return best ? best.name : null;
+  };
+  const chainStar = chainsFlat ? null : starOfChain();
 
   const info = document.getElementById('chains-info');
   // Une ressource moins chère à acheter ne peut pas être « à vendre » : le ⚠ prime, comme sur la ligne.
-  const isStar = n => !boughtFlag[n] && !cheaperToBuy(n) && !!(plan[n] || {}).sell;
+  const isStar = n => !boughtFlag[n] && !cheaperToBuy(n) && worthMaking(n);
   const chainLink = n => `<a href="#" onclick="onChainJump('${n}');return false"
      class="text-indigo-300 hover:underline">${n}</a>`;
   if (chainsFlat) {
     const buy = names.filter(cheaperToBuy);
     const stars = names.filter(isStar);
     info.innerHTML = `${names.length} ressources — clique un nom pour voir sa chaîne`
-      + (stars.length ? ` — ★ ${stars.length} à vendre : ${stars.map(chainLink).join(', ')}` : '')
+      + (stars.length ? ` — ★ ${stars.length} à produire jusqu'au bout : ${stars.map(chainLink).join(', ')}` : '')
       + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   } else {
+    // VERDICT en tête : la chaîne ne sert qu'à répondre « dois-je produire cette ressource ? ».
+    // Comparaison à quantité d'inputs égale (voir CoinH.stepValueAdd), donc valable même quand
+    // l'usine finale est lente et n'absorbe qu'une partie de l'amont.
     const steps = chainSteps(sel, ctx);            // décompte réel : achats déduits
     const buy = steps.filter(cheaperToBuy);
-    const stars = steps.filter(isStar);
-    // Aucune ★ ici ne veut PAS dire « vends la ressource choisie » : le débouché est souvent une
-    // branche sœur, absente de cette chaîne (le FUEL part vers ACID, qui n'est pas un ancêtre d'OIL).
-    // On nomme donc l'étape à dériver et sa destination.
-    let redirect = '';
-    if (!stars.length) {
-      const usable = steps.filter(n => (plan[n] || {}).addsValue);
-      const from = usable[usable.length - 1];               // étape utile la plus avancée
-      const dest = from && (plan[from] || {}).dest;
-      redirect = dest && dest !== from
-        ? ` — ★ rien à vendre ici : dérive ton ${from} vers ${chainLink(dest)}`
-        : ' — ★ rien à vendre ici';
+    const va = valueAdd(sel);
+    let verdict = '';
+    if (va) {
+      const sold = va.inputs.filter(i => i.margin > 0).map(i => i.name).join(' et ');
+      verdict = va.added > 0
+        ? `<span class="verdict ok">✔ FAIS DU ${sel}</span>
+           <span class="text-slate-400">+${fmtPrice(va.added)} par unité vs vendre ${sold || 'ses inputs'}</span>`
+        : `<span class="verdict ko">✘ NE FAIS PAS DE ${sel}</span>
+           <span class="text-slate-400">${fmtPrice(va.added)} par unité — vends ton ${sold || 'input'} à la place</span>`;
     }
-    info.innerHTML = `${steps.length} étapes jusqu'à ${sel}`
-      + (stars.length ? ` — ★ vendre : ${stars.join(', ')}` : redirect)
-      + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
+    info.innerHTML = verdict
+      + ` <span class="text-slate-500">— ${steps.length} étapes</span>`
+      + (buy.length ? ` <span class="text-slate-500">— ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}</span>` : '');
   }
 
   const wait = '<span class="spin neutral">⟳</span>';
@@ -757,17 +767,17 @@ function renderChains() {
     const bought = !!boughtFlag[name];
     const inChain = !chainSet || chainSet.has(name);
     const warn = !bought && inChain && cheaperToBuy(name);
-    const best = !bought && !!(plan[name] || {}).sell;
+    // ★ = ce qu'il faut produire/vendre : la ressource si son étape ajoute de la valeur, sinon
+    // (vue par chaîne) l'input qu'il vaut mieux vendre tel quel.
+    const best = !bought && (chainsFlat ? worthMaking(name) : name === chainStar);
     const trAttr = bought ? ' style="opacity:.5"' : (warn ? ' class="warn"' : (best ? ' class="best"' : ''));
     const flag = warn
       ? `<span class="text-rose-400" title="Moins chère à acheter : ${fmtPrice(priceByName(name) * ctx.buyFactor)} au marché contre ${fmtPrice(m.cost)} à produire. Coche Buy.">⚠ </span>`
-      : (best ? `<span class="text-emerald-400" title="À vendre : aucune transformation en aval ne rapporte plus que sa marge de ${fmtPrice(m.margin)}/unité.">★ </span>` : '');
-    // Ligne sans ★ : on dit pourquoi — soit la transformer rapporte plus, soit l'étape détruit de la valeur.
-    const p = plan[name] || {};
-    const hint = (best || bought || !p.value) ? ''
-      : p.addsValue
-        ? ` title="Ne pas vendre : la transformer vaut ${fmtPrice(p.value)}/unité contre ${fmtPrice(m.margin)} à la vente${p.dest && p.dest !== name ? ` — débouché : ${p.dest}` : ''}."`
-        : ` title="Étape qui détruit de la valeur : vendre ses inputs rapporte plus que ${fmtPrice(m.margin)}/unité."`;
+      : (best ? `<span class="text-emerald-400" title="À produire : ${fmtPrice((valueAdd(name) || {}).added)} de plus par unité que vendre ses inputs.">★ </span>` : '');
+    // Ligne sans ★ : on dit de combien son étape détruit de la valeur.
+    const v = valueAdd(name);
+    const hint = (best || bought || !v || v.added > 0) ? ''
+      : ` title="Étape perdante : ${fmtPrice(v.added)} par unité — vendre ses inputs rapporte plus."`;
     return `<tr${trAttr}${hint}>
       <td class="font-semibold text-white">${flag}${resCell(name)}</td>
       <td>${levelCell(name)}</td>

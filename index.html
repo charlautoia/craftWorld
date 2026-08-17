@@ -41,6 +41,11 @@
   tr.best td { background: rgba(16, 185, 129, .12); }
   tr.best:hover td { background: rgba(16, 185, 129, .22); }
   tr.best td:first-child { box-shadow: inset 3px 0 0 #10b981; }
+  /* Verdict de la chaîne affichée : la réponse doit sauter aux yeux. */
+  .verdict { display: inline-block; padding: .15rem .5rem; border-radius: .3rem;
+             font-weight: 700; font-size: .8rem; letter-spacing: .02em; margin-right: .35rem; }
+  .verdict.ok { background: #065f46; color: #6ee7b7; }
+  .verdict.ko { background: #7f1d1d; color: #fca5a5; }
 </style>
 </head>
 <body class="min-h-screen p-4">
@@ -261,10 +266,10 @@
       Coche <b>Buy</b> sur une étape qui te plombe pour la prendre au marché : la chaîne s'arrête
       là et son prix d'achat remplace son coût de production.
       <span class="text-rose-400">⚠ rosé</span> = la ressource est <b>moins chère à acheter qu'à produire</b>
-      (prix d'achat &lt; Coût mat.) : coche Buy. <span class="text-emerald-400">★ vert</span> = <b>à vendre</b> :
-      aucune transformation en aval ne rapporte plus, et la produire ajoute de la valeur. Une ressource
-      sans ★ vaut mieux être transformée plus loin, ou ne pas être produite du tout — survole la ligne
-      pour savoir lequel des deux cas.
+      (prix d'achat &lt; Coût mat.) : coche Buy. <span class="text-emerald-400">★ vert</span> = <b>meilleur
+      coin/h de cette chaîne</b>, c'est là qu'il faut s'arrêter et vendre.
+      Chaque chaîne est traitée <b>indépendamment des autres</b> : le verdict ne compare que les étapes
+      affichées, il ne suggère jamais de basculer vers une autre chaîne.
       Débit et goulot calculés avec <b>une usine par étape</b>.
     </p>
   </div>
