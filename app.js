@@ -636,12 +636,12 @@ function renderChains() {
     ? DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name)
     : chainSteps(sel, displayCtx);
 
-  // Usines produites à perte (marge < 0) et non achetées : les candidates au « Buy ».
+  // Usines dont l'ÉTAPE SEULE est déficitaire (inputs achetés > prix net) et non cochées Buy.
   // En vue par chaîne on ne compte que les étapes réelles (chainSteps exclut déjà les achetées).
   const losing = ns => ns.filter(n => {
     if (boughtFlag[n]) return false;
     const mm = CoinH.chainMetrics(n, ctx);
-    return mm && mm.margin < 0;
+    return mm && mm.stepMargin != null && mm.stepMargin < 0;
   });
   // Étapes réellement dans la chaîne (null en vue à plat, où chaque ligne est sa propre racine).
   const chainSet = chainsFlat ? null : new Set(chainSteps(sel, ctx));
@@ -702,15 +702,17 @@ function renderChains() {
       : `<span class="text-slate-400">${m.bottleneck ? shortName(m.bottleneck) : '—'}</span>`;
     // Ligne achetée : atténuée, car elle ne fait plus partie de la chaîne — ses chiffres restent
     // affichés pour montrer l'économie de production à laquelle on renonce.
-    // Sinon, marge négative = usine qu'on produit à perte : fond rosé + ⚠, c'est une candidate au « Buy ».
-    // (coin/h et coin/kpow ont le même signe que la marge : ce sont la marge × une grandeur positive.)
+    // Sinon : alerte si l'USINE SEULE tourne à perte, c'est-à-dire si ses inputs achetés au marché
+    // coûtent plus que son prix net (m.stepMargin < 0) — le rendement que montre l'onglet Prix.
+    // Indépendant de la chaîne : OIL peut être bénéficiaire en chaîne (amont produit maison) tout en
+    // étant déficitaire seul. C'est ce cas-là qu'on veut voir.
     // En vue par chaîne, on ne signale que les étapes réellement dans la chaîne : celles situées en
     // amont d'une étape achetée restent affichées (pour pouvoir la décocher) mais ne la nourrissent plus.
     const bought = !!boughtFlag[name];
-    const warn = !bought && m.margin < 0 && (!chainSet || chainSet.has(name));
+    const warn = !bought && m.stepMargin != null && m.stepMargin < 0 && (!chainSet || chainSet.has(name));
     const trAttr = bought ? ' style="opacity:.5"' : (warn ? ' class="warn"' : '');
     const flag = warn
-      ? `<span class="text-rose-400" title="Produite à perte et non achetée — envisage de cocher Buy">⚠ </span>`
+      ? `<span class="text-rose-400" title="Usine à perte : inputs achetés ${fmtPrice(m.directCost)} pour un prix net de ${fmtPrice(m.margin + m.cost)}, soit ${fmtPrice(m.stepMargin)}/unité. Envisage de cocher Buy.">⚠ </span>`
       : '';
     return `<tr${trAttr}>
       <td class="font-semibold text-white">${flag}${shortName(name)}</td>

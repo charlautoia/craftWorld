@@ -435,3 +435,17 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           (DYNAMITE après achat de FIBERGLASS : info « 4 » vs 8 lignes marquées).
         - Vérifié : aucun oubli ni faux positif en vue à plat (12/32 marquées), et cocher FIBERGLASS
           fait tomber DYNAMITE de 10 à 4 alertes, info et marquage concordants.
+
+42. [x] **Correction du critère d'alerte #41** — c'est l'**usine seule** qui compte, pas la chaîne cumulée.
+        - #41 marquait les lignes dont la **marge de chaîne** était négative. L'user visait autre chose :
+          le rendement de l'usine **prise isolément**, celui qu'affiche l'onglet Prix. Cas typique OIL :
+          chaîne **+583/u** (bénéficiaire) alors que l'usine seule **perd** — les deux coexistent.
+        - `coinh.js` : nouveau champ `chainMetrics().stepMargin` = `prix_net − directCost`, soit l'output
+          vendu au marché moins ses propres inputs achetés au marché. Recette sans input (EARTH) → tout
+          le prix net. `null` si le prix d'un input manque (chaîne calculable mais étape non jugeable).
+        - `app.js` : l'alerte et le décompte de la barre d'info utilisent `stepMargin < 0` au lieu de
+          `margin < 0`. Infobulle du ⚠ : rappelle coût des inputs, prix net et marge d'étape.
+        - **Écart Prix / Chaînes à connaître** : l'onglet Prix n'applique la taxe d'achat que si la case
+          *Achat* de la ressource est cochée, alors que `stepMargin` l'applique toujours (dans une chaîne,
+          l'input vient forcément du marché si on n'en produit pas). Sur OIL : −190 sans la taxe (ce que
+          montre l'onglet Prix) contre −274 avec. Le signe est le même, l'ordre de grandeur diffère.

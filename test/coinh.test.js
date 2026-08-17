@@ -331,3 +331,35 @@ test('chainMetrics : boughtOf applique bien la taxe d\'achat', () => {
   ctx.boughtOf = n => n === 'M';
   near(chainMetrics('F', ctx).cost, 2 * 20 * 1.035);
 });
+
+test('chainMetrics.stepMargin : rendement de l\'usine seule, indépendant de la chaîne', () => {
+  // Cas OIL : la chaîne est bénéficiaire (amont produit maison) alors que l'usine seule perd.
+  // A -> M -> F. F vaut 100 net ; ses inputs (2 M) coûtent 110 au marché mais 60 s'il produit M.
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 3, power: 5000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 2, power: 2000 },
+  };
+  const f = chainMetrics('F', mkCtx(recipes, { A: 10, M: 55, F: 100 }));
+  near(f.cost, 60);                    // chaîne : 2 M produits depuis A
+  near(f.margin, 40);                  // chaîne bénéficiaire
+  near(f.directCost, 110);             // usine seule : 2 M achetés au marché
+  near(f.stepMargin, -10);             // ... mais l'usine seule perd 10 par unité
+  assert.ok(f.margin > 0 && f.stepMargin < 0, 'chaîne positive, étape négative');
+});
+
+test('chainMetrics.stepMargin : recette sans input -> tout le prix net', () => {
+  const recipes = { E: { output: 1, duration: '1:00:00', power: 7 } };
+  const e = chainMetrics('E', mkCtx(recipes, { E: 10 }, { sellFactor: 0.965 }));
+  near(e.stepMargin, 10 * 0.965);      // rien à acheter
+  assert.strictEqual(e.directCost, null);
+});
+
+test('chainMetrics.stepMargin : null si le prix d\'un input manque', () => {
+  const recipes = {
+    M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 3, power: 5000 },
+    F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 2, power: 2000 },
+  };
+  const f = chainMetrics('F', mkCtx(recipes, { A: 10, F: 100 }));   // pas de prix pour M
+  assert.strictEqual(f.stepMargin, null, 'non jugeable sans le prix de M');
+  near(f.margin, 100 - 60);                                          // la chaîne reste calculable
+});

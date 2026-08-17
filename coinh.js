@@ -195,9 +195,19 @@
     const p = ctx.priceOf(name);
     if (p == null) return null;
     const margin = p * ctx.sellFactor - n.cost;
+    const direct = directInputCost(name, ctx);
+    // Marge de l'USINE SEULE : son output vendu au marché moins ses propres inputs achetés au marché,
+    // indépendamment de la chaîne (c'est le rendement que montre l'onglet Prix). Négative = l'usine
+    // détruit de la valeur, même si la chaîne complète reste bénéficiaire grâce à l'amont produit maison.
+    // Une recette sans input (EARTH) n'a rien à acheter : sa marge d'étape est son prix net.
+    const rec = ctx.recipeOf(name);
+    const hasInputs = !!(rec && (rec.input1 || rec.input2));
+    const stepMargin = !hasInputs ? p * ctx.sellFactor
+      : (direct == null ? null : p * ctx.sellFactor - direct);
     return {
       cost: n.cost,                                     // coût cumulé des matières achetées, par unité
-      directCost: directInputCost(name, ctx),           // coût des inputs de cette usine seule, achetés
+      directCost: direct,                               // coût des inputs de cette usine seule, achetés
+      stepMargin,                                       // marge de l'usine seule (null si non calculable)
       power: n.power,                                   // power cumulé de toute la chaîne, par unité
       rate: n.rate,                                     // unités/h (1 usine par étape, bridé par le goulot)
       bottleneck: n.bottleneck,                         // étape qui bride la chaîne
