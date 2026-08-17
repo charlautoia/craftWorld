@@ -636,31 +636,45 @@ function renderChains() {
     ? DATA.resources.filter(r => DATA.crafting[r.name]).map(r => r.name)
     : chainSteps(sel, displayCtx);
 
+  // Cache d'un rendu : chaque chaîne est réévaluée plusieurs fois (ligne, meilleur point de vente,
+  // barre d'info) et chainMetrics repart d'une mémoïsation vierge à chaque appel.
+  const mcache = {};
+  const metrics = n => (n in mcache ? mcache[n] : (mcache[n] = CoinH.chainMetrics(n, ctx)));
+
   // Seul signal ACTIONNABLE : acheter la ressource revient moins cher que la produire.
   // (Une étape « mince » — marge d'étape négative — n'est PAS un signal : un intermédiaire comme
   //  OXYGEN est un passage obligé vers GAS, l'arrêter casserait la chaîne.)
   const cheaperToBuy = n => {
     if (boughtFlag[n]) return false;
-    const mm = CoinH.chainMetrics(n, ctx), p = priceByName(n);
+    const mm = metrics(n), p = priceByName(n);
     return !!mm && p != null && p * ctx.buyFactor < mm.cost;
   };
   // Étapes réellement dans la chaîne (null en vue à plat, où chaque ligne est sa propre racine).
   const chainSet = chainsFlat ? null : new Set(chainSteps(sel, ctx));
-  // Meilleur point de vente de la chaîne = coin/h max parmi les étapes réelles. Repère POSITIF :
-  // il montre où s'arrêter, plutôt que de crier au loup sur les maillons obligatoires en amont.
-  let bestStep = null;
-  if (!chainsFlat) {
-    let bestVal = -Infinity;
-    for (const n of chainSet) {
-      const mm = CoinH.chainMetrics(n, ctx);
-      if (mm && mm.coinH > bestVal) { bestVal = mm.coinH; bestStep = n; }
+  // Meilleur point de vente d'une chaîne = coin/h max parmi ses étapes. Repère POSITIF : il montre
+  // où s'arrêter, plutôt que de crier au loup sur les maillons obligatoires en amont.
+  // Vue par chaîne : calculé une fois sur la chaîne affichée. Vue à plat : chaque ligne étant sa
+  // propre chaîne, on regarde si la ressource est l'optimum de la sienne.
+  const bestCache = {};
+  const bestStopOf = n => {
+    if (n in bestCache) return bestCache[n];
+    let bv = -Infinity, bn = null;
+    for (const s of chainSteps(n, ctx)) {
+      const mm = metrics(s);
+      if (mm && mm.coinH > bv) { bv = mm.coinH; bn = s; }
     }
-  }
+    return (bestCache[n] = bn);
+  };
+  const bestStep = chainsFlat ? null : bestStopOf(sel);
 
   const info = document.getElementById('chains-info');
   if (chainsFlat) {
     const buy = names.filter(cheaperToBuy);
+    // Une ressource moins chère à acheter ne peut pas être « à vendre en l'état » : le ⚠ prime,
+    // comme sur la ligne. Sinon HEAT apparaîtrait dans les deux listes.
+    const stars = names.filter(n => !boughtFlag[n] && !cheaperToBuy(n) && bestStopOf(n) === n);
     info.textContent = `${names.length} ressources`
+      + (stars.length ? ` — ★ ${stars.length} à vendre en l'état : ${stars.join(', ')}` : '')
       + (buy.length ? ` — ⚠ ${buy.length} moins chères à acheter : ${buy.join(', ')}` : '');
   } else {
     const steps = chainSteps(sel, ctx);            // décompte réel : achats déduits
@@ -725,12 +739,19 @@ function renderChains() {
     const bought = !!boughtFlag[name];
     const inChain = !chainSet || chainSet.has(name);
     const warn = !bought && inChain && cheaperToBuy(name);
-    const best = !bought && name === bestStep;
+    // Vue à plat : chaque ligne est sa propre chaîne, on compare donc la ressource à l'optimum de la sienne.
+    const target = chainsFlat ? bestStopOf(name) : bestStep;
+    const best = !bought && target === name;
     const trAttr = bought ? ' style="opacity:.5"' : (warn ? ' class="warn"' : (best ? ' class="best"' : ''));
     const flag = warn
       ? `<span class="text-rose-400" title="Moins chère à acheter : ${fmtPrice(priceByName(name) * ctx.buyFactor)} au marché contre ${fmtPrice(m.cost)} à produire. Coche Buy.">⚠ </span>`
-      : (best ? `<span class="text-emerald-400" title="Meilleur coin/h de la chaîne (${fmtPrice(m.coinH)}) : c'est ici qu'il faut vendre.">★ </span>` : '');
-    return `<tr${trAttr}>
+      : (best ? `<span class="text-emerald-400" title="Meilleur coin/h de sa chaîne (${fmtPrice(m.coinH)}) : c'est ici qu'il faut vendre.">★ </span>` : '');
+    // Ligne sans ★ : on indique en infobulle où sa chaîne rapporte le plus, pour ne pas laisser
+    // deviner qu'il vaudrait mieux s'arrêter plus tôt.
+    const hint = (!best && !bought && target && target !== name)
+      ? ` title="Sa chaîne rapporte plus en s'arrêtant à ${target} (${fmtPrice((metrics(target) || {}).coinH)} coin/h contre ${fmtPrice(m.coinH)})"`
+      : '';
+    return `<tr${trAttr}${hint}>
       <td class="font-semibold text-white">${flag}${shortName(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>

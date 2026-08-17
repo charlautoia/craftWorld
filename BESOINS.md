@@ -463,3 +463,17 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           est visiblement en retrait, ce qui était le besoin initial.
         - `stepMargin` (ajouté au #42) reste calculé et testé dans `coinh.js` mais ne pilote plus l'affichage.
         - Barre d'info : `N étapes jusqu'à X — ★ vendre à Y — ⚠ k moins chères à acheter : …`.
+
+44. [x] **★ étendu à la vue à plat** (onglet Chaînes).
+        - Le ★ n'existait qu'en vue par chaîne. En vue à plat chaque ligne est sa **propre** chaîne :
+          une ligne reçoit donc le ★ si elle est le meilleur coin/h **de sa propre chaîne**, c'est-à-dire
+          si la produire jusqu'au bout est le bon choix. `bestStopOf(n)` (mémoïsé) remplace le calcul
+          ponctuel ; la vue par chaîne l'appelle simplement sur la ressource sélectionnée.
+        - Les lignes **sans** ★ portent une infobulle indiquant où leur chaîne rapporte le plus —
+          ex. OIL : « Sa chaîne rapporte plus en s'arrêtant à FUEL (81,2 coin/h contre 69,4) ».
+        - Barre d'info à plat : `★ k à vendre en l'état : …` + `⚠ k moins chères à acheter : …`.
+          Une ressource ⚠ est **exclue** de la liste ★ (le ⚠ prime, comme sur la ligne) — sans quoi HEAT
+          apparaissait dans les deux listes et le décompte de l'info ne collait plus aux lignes marquées.
+        - **Perf** : `chainMetrics` repart d'une mémoïsation vierge à chaque appel et il est désormais
+          invoqué pour chaque ligne, chaque `bestStopOf` et la barre d'info → cache `mcache` local au
+          rendu. Rendu complet des 32 lignes en ~10 ms.
