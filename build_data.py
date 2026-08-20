@@ -57,6 +57,19 @@ POOLS = {
     "CERAMICKEY": "0x884a266b3c1e70cc32ed2af6483070e81b20830c",
     "GLASSKEY": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb",
     "DYNOKEY": "0xb67521d41a2c499ceb1288e70563ca34618da866",
+    # Nouvelles ressources (branches WIRE/NEST, WRAP, BOOK/SALT) + l'élément brut DUST.
+    # ARTICLE et DIPLOMA : aucune pool indexée sur GeckoTerminal à ce jour -> pas de prix live.
+    "DUST": "0x324b4bc0b0670c713e865b179ef4b9757c89cd85",
+    "WIRE": "0xd0fdb28cbbac1808c3bda4c8deb93eb1a8357d0f",
+    "NEST": "0xc2135a1b453e7f744b1725961cd97b5a597696aa",
+    "WETNEST": "0x98d00d1d04743b210cb2d292cc1a8083310d6996",
+    "WARMNEST": "0xec5d2007b60a849d092379075e767a1e38bf54c8",
+    "DYNONEST": "0x99e8af05763ef60b6de106ea82db0c899944e5e4",
+    "PAPERWRAP": "0x62b567745246f46c782d709fcc7cfe762b4015c0",
+    "SANDWRAP": "0x03c1943873df365c01aa900ccdcefa61ed4101f9",
+    "STEAMWRAP": "0xb1bd592c787dcd64de096a886bdd1e97213418cd",
+    "BOOK": "0xff6724bc90d89cac818955b5c311069ede8ca3be",
+    "SALT": "0x98b539ff43aa3dd2a9284f6d9bc5a0a586ba4da0",
 }
 
 # Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
@@ -65,7 +78,7 @@ POOLS = {
 INVERTED = {"COPPER"}
 
 # Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
-ELEMENTS = ["EARTH", "FIRE", "WATER"]
+ELEMENTS = ["EARTH", "FIRE", "WATER", "DUST"]
 
 # Ordre d'affichage préféré (choix user) : ces ressources en tête, puis le reste dans l'ordre du Game Data.
 PREFERRED_ORDER = ["EARTH", "MUD", "CLAY", "SAND", "COPPER", "STEEL", "SCREWS", "WATER", "SEAWATER",
@@ -227,15 +240,13 @@ def parse_batteries(rows):
 
 
 def select_resources(recipe_order):
-    """Items retenus : factories (début → DYNAMITE inclus) + items (BOLTS → DYNOKEY inclus) + éléments bruts.
-    On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS, ainsi que
-    tout ce qui suit DYNOKEY (WIRE, NEST, WRAP, BOOK, SALT, ARTICLE, DIPLOMA... : obsolètes, sans pool)."""
+    """Items retenus : factories (début → DYNAMITE inclus) + tout à partir de BOLTS + éléments bruts.
+    On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
     names = set(ELEMENTS)
     if "DYNAMITE" in recipe_order:
         names |= set(recipe_order[:recipe_order.index("DYNAMITE") + 1])
     if "BOLTS" in recipe_order:
-        end = recipe_order.index("DYNOKEY") + 1 if "DYNOKEY" in recipe_order else len(recipe_order)
-        names |= set(recipe_order[recipe_order.index("BOLTS"):end])
+        names |= set(recipe_order[recipe_order.index("BOLTS"):])
     return names
 
 
@@ -255,7 +266,7 @@ def main():
     crafting = {k: v for k, v in crafting.items() if k in included}
 
     # Ordre de base (Game Data) : EARTH, WATER, FIRE puis l'ordre du Sheet.
-    base_order = ["EARTH", "WATER", "FIRE"] + [n for n in recipe_order if n in included]
+    base_order = ["EARTH", "WATER", "FIRE", "DUST"] + [n for n in recipe_order if n in included]
     base_order += [n for n in sorted(included) if n not in base_order]   # filet de sécurité
     # Ordre d'affichage : préférence user en tête, puis le reste dans l'ordre de base.
     game_order = [n for n in PREFERRED_ORDER if n in included]
