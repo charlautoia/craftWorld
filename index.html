@@ -53,7 +53,12 @@
      Flex + padding vertical nul : la hauteur de ligne reste fixée par les autres
      cellules (sélecteur de niveau), donc le tableau ne s'allonge pas. */
   #chains-table td:has(.res-icon) { padding-top: 0; padding-bottom: 0; line-height: 0; }
+  /* ★/⚠ calé à gauche, icône calée à droite : toutes les icônes sont alignées
+     entre elles, que la ligne porte un repère ou non. */
   .res-cell { display: flex; align-items: center; gap: .15rem; white-space: nowrap; }
+  /* margin auto plutôt que space-between : marche aussi quand la ligne n'a pas de repère
+     et que l'icône est donc l'unique enfant. */
+  .res-cell > :last-child { margin-left: auto; }
   /* Infobulle maison : title= ne s'affiche pas au tactile, donc [data-tip] + tap. */
   [data-tip] { cursor: help; }
   #tip { position: fixed; z-index: 60; max-width: min(18rem, 85vw); display: none;
