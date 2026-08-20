@@ -879,12 +879,14 @@ async function init() {
   }
 }
 
-// Ressources dont on a l'icône du jeu dans icons/ (média kit officiel).
-// Les autres (ajouts récents : DUST, BOLTS, clés, WIRE/NEST, WRAP, BOOK...) n'y sont
-// pas encore : elles retombent sur le nom tronqué.
-const ICONS = new Set(['ACID', 'ALGAE', 'CEMENT', 'CERAMICS', 'CLAY', 'COPPER', 'DYNAMITE', 'EARTH',
-  'ENERGY', 'FIBERGLASS', 'FIRE', 'FUEL', 'GAS', 'GLASS', 'HEAT', 'HYDROGEN', 'LAVA', 'MUD', 'OIL',
-  'OXYGEN', 'PLASTICS', 'SAND', 'SCREWS', 'SEAWATER', 'STEAM', 'STEEL', 'STONE', 'SULFUR', 'WATER']);
+// Ressources dont on a l'icône du jeu dans icons/ (média kit officiel) : les 47 y sont.
+const ICONS = new Set([
+  'ACID', 'ALGAE', 'ARTICLE', 'BOLTS', 'BOOK', 'CEMENT', 'CERAMICKEY', 'CERAMICS', 'CLAY',
+  'COPPER', 'DIPLOMA', 'DUST', 'DYNAMITE', 'DYNOKEY', 'DYNONEST', 'EARTH', 'ENERGY',
+  'FIBERGLASS', 'FIRE', 'FUEL', 'GAS', 'GLASS', 'GLASSKEY', 'HEAT', 'HYDROGEN', 'KEY', 'LAVA',
+  'MUD', 'NEST', 'OIL', 'OXYGEN', 'PAPERWRAP', 'PLASTICS', 'SALT', 'SAND', 'SANDWRAP', 'SCREWS',
+  'SEAWATER', 'STEAM', 'STEAMWRAP', 'STEEL', 'STONE', 'SULFUR', 'WARMNEST', 'WATER', 'WETNEST',
+  'WIRE']);
 
 // ── Infobulles tactiles ──────────────────────────────────────────────────────
 // title= n'apparaît jamais sur mobile (pas de survol) : les éléments [data-tip]

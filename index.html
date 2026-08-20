@@ -47,7 +47,9 @@
   .verdict.ok { background: #065f46; color: #6ee7b7; }
   .verdict.ko { background: #7f1d1d; color: #fca5a5; }
   /* Icônes de ressources : sprites 20x20 du jeu, à afficher sans lissage. */
-  .res-icon { display: inline-block; width: 38px; height: 38px;
+  /* max-width/flex-shrink neutralisés : sans ça le reset Tailwind (img { max-width: 100% })
+     écrase l'icône quand la colonne est étroite. */
+  .res-icon { display: inline-block; width: 38px; height: 38px; max-width: none; flex: none;
                image-rendering: pixelated; vertical-align: middle; }
   /* Colonne Res des chaînes : ★/⚠ et icône côte à côte, icône agrandie au maximum.
      Flex + padding vertical nul : la hauteur de ligne reste fixée par les autres
