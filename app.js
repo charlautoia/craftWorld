@@ -783,7 +783,7 @@ function renderChains() {
     const hint = (best || bought || !v || v.added > 0) ? ''
       : ` title="Étape perdante : ${fmtPrice(v.added)} par unité — vendre ses inputs rapporte plus."`;
     return `<tr${trAttr}${hint}>
-      <td class="font-semibold text-white">${flag}${resCell(name)}</td>
+      <td class="font-semibold text-white"><span class="res-cell">${flag}${resCell(name)}</span></td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>
