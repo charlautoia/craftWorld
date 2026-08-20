@@ -46,6 +46,12 @@
              font-weight: 700; font-size: .8rem; letter-spacing: .02em; margin-right: .35rem; }
   .verdict.ok { background: #065f46; color: #6ee7b7; }
   .verdict.ko { background: #7f1d1d; color: #fca5a5; }
+  /* Infobulle maison : title= ne s'affiche pas au tactile, donc [data-tip] + tap. */
+  [data-tip] { cursor: help; }
+  #tip { position: fixed; z-index: 60; max-width: min(18rem, 85vw); display: none;
+         background: #0b1220; color: #e2e8f0; border: 1px solid #475569; border-radius: .4rem;
+         padding: .35rem .55rem; font-size: .78rem; line-height: 1.25rem; pointer-events: none;
+         box-shadow: 0 6px 20px rgba(0,0,0,.55); }
 </style>
 </head>
 <body class="min-h-screen p-4">
@@ -289,5 +295,6 @@
     document.body.appendChild(s1);
   })();
 </script>
+<div id="tip"></div>
 </body>
 </html>

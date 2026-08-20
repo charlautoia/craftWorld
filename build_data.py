@@ -92,7 +92,7 @@ CURRENT_LEVELS = {
     "MUD": 17, "CLAY": 16, "SAND": 11, "COPPER": 6, "STEEL": 8, "SCREWS": 7,
     "SEAWATER": 30, "ALGAE": 20, "OXYGEN": 20, "GAS": 15, "FUEL": 15, "OIL": 10,
     "HEAT": 29, "LAVA": 19, "GLASS": 5, "SULFUR": 2, "FIBERGLASS": 2, "CERAMICS": 10,
-    "STONE": 8, "STEAM": 1, "CEMENT": 9, "ACID": 4, "PLASTICS": 4, "ENERGY": 5,
+    "STONE": 8, "STEAM": 1, "CEMENT": 9, "ACID": 5, "PLASTICS": 4, "ENERGY": 5,
     "HYDROGEN": 5, "DYNAMITE": 5,
 }
 

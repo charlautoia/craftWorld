@@ -724,11 +724,11 @@ function renderChains() {
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
   // Nom tronqué à 4 caractères pour garder le tableau étroit ; nom complet en infobulle.
   // NB : deux couples se confondent à 4 lettres — CERAMICS/CERAMICKEY et GLASS/GLASSKEY.
-  const shortName = n => `<span title="${n}">${String(n).slice(0, 4)}</span>`;
+  const shortName = n => `<span data-tip="${n}">${String(n).slice(0, 4)}</span>`;
   // Colonne Res : en vue à plat, cliquer ouvre le détail de la chaîne de cette ressource.
   const resCell = n => chainsFlat
     ? `<a href="#" onclick="onChainJump('${n}');return false"
-         class="hover:underline decoration-dotted" title="${n} — voir le détail de sa chaîne">${String(n).slice(0, 4)}</a>`
+         class="hover:underline decoration-dotted" data-tip="${n} — voir le détail de sa chaîne">${String(n).slice(0, 4)}</a>`
     : shortName(n);
   // Niveau d'usine modifiable ici aussi (même état que l'onglet Prix, donc même handler).
   const levelCell = n => {
@@ -869,4 +869,32 @@ async function init() {
   }
 }
 
+// ── Infobulles tactiles ──────────────────────────────────────────────────────
+// title= n'apparaît jamais sur mobile (pas de survol) : les éléments [data-tip]
+// affichent leur texte au survol ET au tap, dans une bulle positionnée à la main.
+function setupTips() {
+  const tip = document.getElementById('tip');
+  const hide = () => { tip.style.display = 'none'; };
+  const show = (el) => {
+    tip.textContent = el.dataset.tip;
+    tip.style.display = 'block';
+    const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+    // Au-dessus de l'élément si la place manque en dessous ; borné à l'écran.
+    const top = r.bottom + 6 + t.height > innerHeight ? r.top - t.height - 6 : r.bottom + 6;
+    tip.style.left = Math.max(4, Math.min(r.left, innerWidth - t.width - 4)) + 'px';
+    tip.style.top = Math.max(4, top) + 'px';
+  };
+  document.addEventListener('pointerover', e => {
+    if (e.pointerType !== 'mouse') return;               // le tactile passe par le click
+    const el = e.target.closest('[data-tip]');
+    el ? show(el) : hide();
+  });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-tip]');
+    el ? show(el) : hide();
+  });
+  addEventListener('scroll', hide, true);
+}
+
+setupTips();
 init();
