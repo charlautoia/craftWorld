@@ -57,8 +57,7 @@ POOLS = {
     "CERAMICKEY": "0x884a266b3c1e70cc32ed2af6483070e81b20830c",
     "GLASSKEY": "0x7ac99f731a96ada40371fa2a4ec1527d0b6a48fb",
     "DYNOKEY": "0xb67521d41a2c499ceb1288e70563ca34618da866",
-    # Nouvelles ressources (branches WIRE/NEST, WRAP, BOOK/SALT) + l'élément brut DUST.
-    # ARTICLE et DIPLOMA : aucune pool indexée sur GeckoTerminal à ce jour -> pas de prix live.
+    # Nouvelles ressources (branches WIRE/NEST, WRAP, BOOK/SALT/ARTICLE/DIPLOMA) + l'élément brut DUST.
     "DUST": "0x324b4bc0b0670c713e865b179ef4b9757c89cd85",
     "WIRE": "0xd0fdb28cbbac1808c3bda4c8deb93eb1a8357d0f",
     "NEST": "0xc2135a1b453e7f744b1725961cd97b5a597696aa",
@@ -70,6 +69,8 @@ POOLS = {
     "STEAMWRAP": "0xb1bd592c787dcd64de096a886bdd1e97213418cd",
     "BOOK": "0xff6724bc90d89cac818955b5c311069ede8ca3be",
     "SALT": "0x98b539ff43aa3dd2a9284f6d9bc5a0a586ba4da0",
+    "ARTICLE": "0x2e75c0bf22eba42ed6ee83ba208078bc5c0daf8d",
+    "DIPLOMA": "0x0450dbf6f748709d7c01f4dc556643e1220c9227",
 }
 
 # Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
