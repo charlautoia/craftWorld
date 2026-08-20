@@ -722,13 +722,17 @@ function renderChains() {
   const signCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
-  // Nom tronqué à 4 caractères pour garder le tableau étroit ; nom complet en infobulle.
-  // NB : deux couples se confondent à 4 lettres — CERAMICS/CERAMICKEY et GLASS/GLASSKEY.
-  const shortName = n => `<span data-tip="${n}">${String(n).slice(0, 4)}</span>`;
-  // Colonne Res : en vue à plat, cliquer ouvre le détail de la chaîne de cette ressource.
+  // Colonne Res : icône du jeu si on l'a, sinon nom tronqué à 4 caractères (tableau étroit).
+  // Nom complet toujours en infobulle. NB : deux couples se confondent à 4 lettres —
+  // CERAMICS/CERAMICKEY et GLASS/GLASSKEY, d'où l'intérêt de l'icône.
+  const resLabel = n => ICONS.has(n)
+    ? `<img src="icons/${n.toLowerCase()}.png" alt="${n}" class="res-icon">`
+    : String(n).slice(0, 4);
+  const shortName = n => `<span data-tip="${n}">${resLabel(n)}</span>`;
+  // En vue à plat, cliquer ouvre le détail de la chaîne de cette ressource.
   const resCell = n => chainsFlat
     ? `<a href="#" onclick="onChainJump('${n}');return false"
-         class="hover:underline decoration-dotted" data-tip="${n} — voir le détail de sa chaîne">${String(n).slice(0, 4)}</a>`
+         class="hover:underline decoration-dotted" data-tip="${n} — voir le détail de sa chaîne">${resLabel(n)}</a>`
     : shortName(n);
   // Niveau d'usine modifiable ici aussi (même état que l'onglet Prix, donc même handler).
   const levelCell = n => {
@@ -868,6 +872,13 @@ async function init() {
     </div>`;
   }
 }
+
+// Ressources dont on a l'icône du jeu dans icons/ (média kit officiel).
+// Les autres (ajouts récents : DUST, BOLTS, clés, WIRE/NEST, WRAP, BOOK...) n'y sont
+// pas encore : elles retombent sur le nom tronqué.
+const ICONS = new Set(['ACID', 'ALGAE', 'CEMENT', 'CERAMICS', 'CLAY', 'COPPER', 'DYNAMITE', 'EARTH',
+  'ENERGY', 'FIBERGLASS', 'FIRE', 'FUEL', 'GAS', 'GLASS', 'HEAT', 'HYDROGEN', 'LAVA', 'MUD', 'OIL',
+  'OXYGEN', 'PLASTICS', 'SAND', 'SCREWS', 'SEAWATER', 'STEAM', 'STEEL', 'STONE', 'SULFUR', 'WATER']);
 
 // ── Infobulles tactiles ──────────────────────────────────────────────────────
 // title= n'apparaît jamais sur mobile (pas de survol) : les éléments [data-tip]
