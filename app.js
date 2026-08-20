@@ -719,6 +719,11 @@ function renderChains() {
     return `<input type="checkbox"${boughtFlag[n] ? ' checked' : ''}
        onchange="onBoughtChange('${n}', this.checked)" class="accent-amber-500">`;
   };
+  // Prix d'achat au marché de la ressource, taxe d'achat comprise (— si pas de cours).
+  const buyPriceCell = n => {
+    const p = priceByName(n);
+    return p == null ? (pricesLoaded ? '—' : '⟳') : fmtPrice(p * ctx.buyFactor);
+  };
   const signCell = v => v == null
     ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
     : `<span class="${v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'} font-mono">${fmtPrice(v)}</span>`;
@@ -792,6 +797,7 @@ function renderChains() {
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.cost)}</span></td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.directCost)}</span></td>
       <td><span class="text-amber-300 font-mono">${fmtPrice(m.margin + m.cost)}</span></td>
+      <td><span class="text-rose-300 font-mono">${buyPriceCell(name)}</span></td>
       <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
       <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
       <td>${gl}</td>
