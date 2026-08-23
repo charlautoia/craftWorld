@@ -2,7 +2,7 @@
 // Exécuter : node --test   (ou npm test)
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics, stepValueAdd } = require('../coinh.js');
+const { coinPerHour, durationHours, yieldFactor, profitPerCycle, coinPerKPower, upgradeCost, powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics, stepValueAdd, poolPrice, clampFactoryLevels } = require('../coinh.js');
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≈ ${b}`);
 // getPrice depuis une table {symbole: prix}
@@ -427,4 +427,68 @@ test('stepValueAdd : null si non calculable', () => {
   const ctx = mkCtx(recipes, {});
   assert.strictEqual(stepValueAdd('F', ctx, mkMetrics(recipes, ctx)), null, 'prix manquants');
   assert.strictEqual(stepValueAdd('A', mkCtx(recipes, { A: 1, F: 30 }), mkMetrics(recipes, mkCtx(recipes, { A: 1, F: 30 }))), null, 'A n\'a pas de recette');
+});
+
+// ── Non-régression : prix de pool non fini (bug « NaN » qui contaminait compteurs et dégradés) ──
+test('poolPrice : pool normale = base_token_price_quote_token', () => {
+  near(poolPrice({ base_token_price_quote_token: '0.0125' }, false, 4), 0.0125);
+  near(poolPrice({ base_token_price_quote_token: 2 }, false, null), 2);   // coinUsd inutile ici
+});
+
+test('poolPrice : champ absent/vide/non numérique -> null (jamais NaN)', () => {
+  // L'API omet le prix des pools sans trade récent : parseFloat renverrait NaN, qui traversait
+  // `price != null`, gonflait le compteur « ✓ N prix » et cassait le dégradé de TOUTES les lignes.
+  for (const attrs of [{}, { base_token_price_quote_token: null }, { base_token_price_quote_token: '' },
+                       { base_token_price_quote_token: 'n/a' }]) {
+    assert.strictEqual(poolPrice(attrs, false, 4), null);
+  }
+  assert.strictEqual(poolPrice(null, false, 4), null);        // pool absente de la réponse
+  assert.strictEqual(poolPrice(undefined, true, 4), null);
+});
+
+test('poolPrice : pool inversée (ressource = quote token) via le pont USD', () => {
+  // COPPER : pool USDC/COPPER, COPPER = quote -> prix COIN = COPPER_usd / COIN_usd.
+  near(poolPrice({ quote_token_price_usd: '0.5' }, true, 0.25), 2);
+  assert.strictEqual(poolPrice({ quote_token_price_usd: '0.5' }, true, null), null, 'COIN/USD inconnu');
+  assert.strictEqual(poolPrice({ quote_token_price_usd: '0.5' }, true, 0), null, 'COIN/USD nul -> pas de division');
+  assert.strictEqual(poolPrice({ quote_token_price_usd: 'x' }, true, 0.25), null);
+});
+
+// ── Non-régression : niveau d'usine persisté devenu inexistant (ligne muette « — » définitive) ──
+const RES = [{ name: 'SCREWS', level: 3 }, { name: 'STEEL', level: 1 }, { name: 'WATER', level: null }];
+const CRAFT = { SCREWS: [{ level: 1 }, { level: 3 }, { level: 7 }], STEEL: [{ level: 1 }, { level: 2 }] };
+
+test('clampFactoryLevels : un niveau sauvegardé valide est conservé', () => {
+  const out = clampFactoryLevels(RES, CRAFT, { SCREWS: 7, STEEL: 2 });
+  assert.deepStrictEqual(out, { SCREWS: 7, STEEL: 2 });
+});
+
+test('clampFactoryLevels : rien de sauvegardé -> niveau par défaut de la ressource', () => {
+  assert.deepStrictEqual(clampFactoryLevels(RES, CRAFT, {}), { SCREWS: 3, STEEL: 1 });
+});
+
+test('clampFactoryLevels : niveau disparu du Game Data -> repli sur le défaut, puis sur le plus proche', () => {
+  // 5 n'existe plus : le défaut de la ressource (3) existe -> on y revient.
+  assert.strictEqual(clampFactoryLevels(RES, CRAFT, { SCREWS: 5 }).SCREWS, 3);
+  // Ni le sauvegardé (9) ni le défaut (4) n'existent -> niveau disponible le plus proche du sauvegardé.
+  const res = [{ name: 'SCREWS', level: 4 }];
+  assert.strictEqual(clampFactoryLevels(res, CRAFT, { SCREWS: 9 }).SCREWS, 7);
+  assert.strictEqual(clampFactoryLevels(res, CRAFT, { SCREWS: 2 }).SCREWS, 1);
+});
+
+test('clampFactoryLevels : ressources sans recette ignorées ou laissées au défaut', () => {
+  const out = clampFactoryLevels(RES, CRAFT, {});
+  assert.ok(!('WATER' in out), 'WATER (level null) n\'a pas de niveau d\'usine');
+  // Ressource déclarée avec un niveau mais absente de `crafting` : on garde son niveau par défaut.
+  assert.deepStrictEqual(clampFactoryLevels([{ name: 'X', level: 2 }], CRAFT, { X: 9 }), { X: 2 });
+});
+
+// Le niveau ramené par clampFactoryLevels retrouve TOUJOURS une recette : c'est tout l'objet du fix.
+test('clampFactoryLevels : le niveau retenu correspond toujours à une recette existante', () => {
+  for (const saved of [{}, { SCREWS: 5 }, { SCREWS: 99 }, { SCREWS: 0 }, { STEEL: 42 }]) {
+    const out = clampFactoryLevels(RES, CRAFT, saved);
+    for (const [name, lvl] of Object.entries(out)) {
+      assert.ok((CRAFT[name] || []).some(l => l.level === lvl), `${name}_${lvl} doit exister`);
+    }
+  }
 });

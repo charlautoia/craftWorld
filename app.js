@@ -183,11 +183,13 @@ function onResetOrder() {
 // Dégradé rouge→vert d'une valeur dans [range.min, range.max]. EARTH est exclu (outlier).
 const clamp01 = x => Math.max(0, Math.min(1, x));
 function heatRange(rows, vals) {
-  const xs = rows.filter(r => r.name !== 'EARTH' && vals[r.name] != null).map(r => vals[r.name]);
+  // Number.isFinite : un NaN dans xs rendrait min/max NaN, et TOUTES les cellules perdraient
+  // leur dégradé (NaN !== NaN, donc le garde-fou max === min ne se déclenche pas).
+  const xs = rows.filter(r => r.name !== 'EARTH' && Number.isFinite(vals[r.name])).map(r => vals[r.name]);
   return xs.length ? { min: Math.min(...xs), max: Math.max(...xs) } : null;
 }
 function heatSpan(v, range, excluded) {
-  const bg = (excluded || !range || range.max === range.min) ? ''
+  const bg = (excluded || !range || range.max === range.min || !Number.isFinite(v)) ? ''
     : `background:hsla(${Math.round(clamp01((v - range.min) / (range.max - range.min)) * 120)},60%,42%,0.6);`;
   return `<span class="font-mono" style="${bg}padding:.1rem .45rem;border-radius:.25rem;color:#f1f5f9">${fmtPrice(v)}</span>`;
 }
@@ -435,11 +437,12 @@ function renderPowerPlant() {
 
   // entrées à afficher : {name, l} (l = un niveau de centrale).
   const entries = [];
-  if (flat) Object.keys(DATA.powerplants).forEach(name => (DATA.powerplants[name] || []).forEach(l => entries.push({ name, l })));
-  else (DATA.powerplants[sel] || []).forEach(l => entries.push({ name: sel, l }));
+  const pp = DATA.powerplants || {};
+  if (flat) Object.keys(pp).forEach(name => (pp[name] || []).forEach(l => entries.push({ name, l })));
+  else (pp[sel] || []).forEach(l => entries.push({ name: sel, l }));
 
   document.getElementById('powerplant-info').textContent = flat
-    ? `${entries.length} niveaux — ${Object.keys(DATA.powerplants).length} centrales`
+    ? `${entries.length} niveaux — ${Object.keys(pp).length} centrales`
     : `${entries.length} niveaux`;
 
   const prevPerDayByName = {};   // per_day du niveau précédent, par centrale (0 si 1er niveau)
@@ -535,16 +538,26 @@ async function fetchAllPrices() {
   const withPool = DATA.resources.filter(r => r.pool);
   const pools = withPool.map(r => r.pool);
   const byAddr = {};                         // adresse minuscule → attributes du pool
+  const fetched = new Set();                 // pools d'un chunk RÉCUPÉRÉ (succès) : seuls ceux-là sont réécrits
+  const errors = [];
 
   try {
+    // Un chunk en échec (429, coupure réseau) ne doit pas jeter les prix des autres : on isole
+    // chaque appel, et les pools des chunks ratés gardent leur valeur précédente.
     for (let i = 0; i < pools.length; i += 30) {   // l'API accepte 30 pools max par appel
       const chunk = pools.slice(i, i + 30);
-      const res = await fetch(POOL_API + chunk.join(','), {
-        headers: { 'Accept': 'application/json;version=20230302' }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      for (const p of json.data) byAddr[p.attributes.address.toLowerCase()] = p.attributes;
+      try {
+        const res = await fetch(POOL_API + chunk.join(','), {
+          headers: { 'Accept': 'application/json;version=20230302' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        for (const p of json.data) byAddr[p.attributes.address.toLowerCase()] = p.attributes;
+        for (const a of chunk) fetched.add(a);
+      } catch (e) {
+        errors.push(e.message);
+        console.error(e);
+      }
     }
 
     // Prix du COIN en USD = quote_token_price_usd d'une pool normale (RESOURCE/COIN).
@@ -552,22 +565,25 @@ async function fetchAllPrices() {
     for (const r of withPool) {
       if (r.quote) continue;
       const a = byAddr[r.pool.toLowerCase()];
-      if (a) { coinUsd = parseFloat(a.quote_token_price_usd); break; }
+      if (!a) continue;
+      const u = parseFloat(a.quote_token_price_usd);
+      if (Number.isFinite(u) && u > 0) { coinUsd = u; break; }
     }
 
     let ok = 0;
     for (const r of withPool) {
+      if (!fetched.has(r.pool)) continue;                                  // chunk raté : on garde l'ancien prix
       const a = byAddr[r.pool.toLowerCase()];
-      if (!a) { livePrice[r.pool] = null; continue; }
-      const price = r.quote
-        ? (coinUsd ? parseFloat(a.quote_token_price_usd) / coinUsd : null)  // ressource = quote token → pont USD
-        : parseFloat(a.base_token_price_quote_token);                       // ressource = base, quote = COIN
+      const price = CoinH.poolPrice(a, r.quote, coinUsd);                  // null si champ absent ou non fini
       livePrice[r.pool] = price;
       if (price != null) ok++;
-      const pc = a.price_change_percentage;                                 // variation 24h (pools normales)
-      dayVar[r.pool] = (!r.quote && pc && pc.h24 != null && pc.h24 !== '') ? parseFloat(pc.h24) : null;
+      const pc = a && a.price_change_percentage;                           // variation 24h (pools normales)
+      const h24 = (!r.quote && pc) ? parseFloat(pc.h24) : NaN;
+      dayVar[r.pool] = Number.isFinite(h24) ? h24 : null;
     }
-    status.textContent = `✓ ${ok} prix — ${new Date().toLocaleTimeString('fr-FR')}`;
+    status.textContent = errors.length
+      ? `⚠ ${ok}/${pools.length} prix (${errors.length} appel(s) en échec) — ${new Date().toLocaleTimeString('fr-FR')}`
+      : `✓ ${ok} prix — ${new Date().toLocaleTimeString('fr-FR')}`;
   } catch (e) {
     status.textContent = `Erreur : ${e.message}`;
     console.error(e);
@@ -749,9 +765,11 @@ function renderChains() {
        class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
   };
 
+  const stepsCache = {};
+  const stepCount = n => (n in stepsCache ? stepsCache[n] : (stepsCache[n] = chainSteps(n, ctx).length));
   document.getElementById('chains-body').innerHTML = names.map(name => {
-    const m = CoinH.chainMetrics(name, ctx);
-    const steps = chainSteps(name, ctx).length;
+    const m = metrics(name);          // cache du rendu : chainMetrics repart d'une mémoïsation vierge
+    const steps = stepCount(name);
     if (!m) return `<tr>
       <td class="font-semibold text-white">${shortName(name)}</td>
       <td>${levelCell(name)}</td>
@@ -821,7 +839,9 @@ async function init() {
       buyFlag[r.name] = (DATA.crafting[r.name] || []).some(l =>
         [l.input1, l.input2].some(i => i && !DATA.crafting[i]));
     } });
-    Object.assign(factoryLevel, loadLS(LS_LEVELS));
+    // Un niveau sauvegardé qui n'existe plus dans le Game Data laisserait la ligne sans recette,
+    // donc muette ("—") sans explication : on le ramène sur un niveau existant.
+    Object.assign(factoryLevel, CoinH.clampFactoryLevels(DATA.resources, DATA.crafting, loadLS(LS_LEVELS)));
     Object.assign(mastery, loadLS(LS_MASTERY));
     Object.assign(bonusPct, loadLS(LS_BONUS));
     Object.assign(buyFlag, loadLS(LS_BUY));

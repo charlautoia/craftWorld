@@ -243,9 +243,44 @@
     return { added: m.margin - forgone, forgone, inputs };
   }
 
+  // ── Prix de pool (GeckoTerminal) ────────────────────────────────────────────
+  // Prix d'une ressource EN COIN à partir des `attributes` d'une pool.
+  //  - pool normale (RESOURCE/COIN) : `base_token_price_quote_token` directement ;
+  //  - pool inversée (ressource = QUOTE token, ex. USDC/COPPER) : pont USD, resource_usd / coinUsd.
+  // Renvoie null si le champ manque ou n'est pas un nombre fini : l'API omet parfois le prix des
+  // pools sans trade récent, et un NaN qui remonte contamine tout (compteurs, dégradés, tris).
+  function poolPrice(attrs, isQuote, coinUsd) {
+    if (!attrs) return null;
+    const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : null; };
+    if (!isQuote) return num(attrs.base_token_price_quote_token);
+    const usd = num(attrs.quote_token_price_usd);
+    return (usd == null || !coinUsd) ? null : usd / coinUsd;
+  }
+
+  // ── Niveaux d'usine persistés ───────────────────────────────────────────────
+  // Réconcilie les niveaux sauvegardés (localStorage) avec les recettes réellement présentes dans
+  // data.json : un niveau retiré du Game Data laisserait sinon la ligne sans recette, donc muette
+  // ("—" définitif) sans que l'utilisateur puisse comprendre pourquoi.
+  // Ordre de repli : niveau sauvegardé s'il existe -> niveau par défaut de la ressource s'il existe
+  // -> niveau disponible le plus proche du sauvegardé.
+  // resources : [{name, level}] ; crafting : {name: [{level}]} ; saved : {name: level}.
+  function clampFactoryLevels(resources, crafting, saved) {
+    const out = {};
+    for (const r of (resources || [])) {
+      if (!r || r.level == null) continue;
+      const levels = (crafting && crafting[r.name] || []).map(l => l.level);
+      const want = (saved && saved[r.name] != null) ? saved[r.name] : r.level;
+      if (!levels.length) { out[r.name] = r.level; continue; }
+      if (levels.indexOf(want) >= 0) { out[r.name] = want; continue; }
+      if (levels.indexOf(r.level) >= 0) { out[r.name] = r.level; continue; }
+      out[r.name] = levels.reduce((a, b) => Math.abs(b - want) < Math.abs(a - want) ? b : a);
+    }
+    return out;
+  }
+
   return {
     durationHours, yieldFactor, profitPerCycle, coinPerHour, coinPerKPower, upgradeCost,
     powerPlantCostPerKPower, powerPlantUpgradeEfficiency, batteryUpgradeEfficiency, chainMetrics,
-    stepValueAdd,
+    stepValueAdd, poolPrice, clampFactoryLevels,
   };
 });
