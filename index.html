@@ -88,12 +88,17 @@
   </div>
 
   <!-- Tabs -->
-  <div id="tabs" class="flex gap-2 mb-4">
+  <div id="tabs" class="flex flex-wrap gap-2 mb-4">
     <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('chains')">Chaînes</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('renta')">Prix</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('crafting')">Crafting</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('powerplant')">PowerPlant</button>
     <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('batteries')">Batteries</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('school')">School</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('houses')">Maisons</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('hatcheries')">Couveuses</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('buildings')">Bâtiments</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-700" onclick="showTab('townhall')">TownHall</button>
   </div>
 
   <!-- ── TAB RENTA ─────────────────────────────────────────────────────────── -->
@@ -242,6 +247,167 @@
             </tr>
           </thead>
           <tbody id="batteries-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABS BÂTIMENTS (School / Maisons / Couveuses / Bâtiments / TownHall) ────── -->
+  <div id="tab-school" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="school-select" onchange="renderBuildingTab('school')" class="w-48"></select>
+      <button id="school-flat-btn" onclick="toggleBuildingFlat('school')"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="school-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="school-table">
+          <thead>
+            <tr>
+              <th id="school-res-th">Bâtiment</th>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>Up Sum</th>
+              <th>Mode</th>
+              <th>TH</th>
+              <th>Max</th>
+              <th>Slots</th>
+              <th>Formation</th>
+              <th>Reroll pow</th>
+              <th>Reroll art</th>
+              <th>Com</th>
+              <th>Peu</th>
+              <th>Rar</th>
+              <th>Épi</th>
+              <th>Lég</th>
+              <th>Myt</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="school-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-houses" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="houses-select" onchange="renderBuildingTab('houses')" class="w-48"></select>
+      <button id="houses-flat-btn" onclick="toggleBuildingFlat('houses')"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="houses-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="houses-table">
+          <thead>
+            <tr>
+              <th id="houses-res-th">Maison</th>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>Up Sum</th>
+              <th>TH</th>
+              <th>Max</th>
+              <th>Résidents</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="houses-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-hatcheries" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="hatcheries-select" onchange="renderBuildingTab('hatcheries')" class="w-48"></select>
+      <button id="hatcheries-flat-btn" onclick="toggleBuildingFlat('hatcheries')"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="hatcheries-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="hatcheries-table">
+          <thead>
+            <tr>
+              <th id="hatcheries-res-th">Couveuse</th>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>Up Sum</th>
+              <th>TH</th>
+              <th>Max</th>
+              <th>Slots</th>
+              <th>Réduc. incub.</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="hatcheries-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-buildings" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <select id="buildings-select" onchange="renderBuildingTab('buildings')" class="w-48"></select>
+      <button id="buildings-flat-btn" onclick="toggleBuildingFlat('buildings')"
+        class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
+      <span class="text-slate-500 text-sm" id="buildings-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="buildings-table">
+          <thead>
+            <tr>
+              <th id="buildings-res-th">Bâtiment</th>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>Up Sum</th>
+              <th>TH</th>
+              <th>Niv. joueur</th>
+              <th>Taille</th>
+              <th>Max</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="buildings-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-townhall" class="hidden">
+    <div class="flex gap-3 mb-3 items-center">
+      <span class="text-slate-500 text-sm" id="townhall-info"></span>
+    </div>
+    <div class="rounded-xl overflow-hidden border border-slate-700">
+      <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
+        <table id="townhall-table">
+          <thead>
+            <tr>
+              <th>Niveau</th>
+              <th>UpCost</th>
+              <th>Up Sum</th>
+              <th>Débloqué niv.</th>
+              <th>Capacité pow</th>
+              <th>Pas récup.</th>
+              <th>Pow / pas</th>
+              <th>Pow / h</th>
+              <th>Durée upgrade</th>
+              <th>Coût</th>
+              <th>Qté coût</th>
+            </tr>
+          </thead>
+          <tbody id="townhall-body"></tbody>
         </table>
       </div>
     </div>

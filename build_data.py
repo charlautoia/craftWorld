@@ -19,6 +19,11 @@ GID_RECIPES = "1026795583"   # ID, OUTPUT, DURATION, INPUT 1/2 SYMBOL+AMOUNT, YI
 GID_BASE = "754695901"       # ressources de base : ID, OUTPUT, DURATION, INPUT SYMBOL+AMOUNT, ... POWER COST
 GID_POWERPLANTS = "360630991"  # centrales : NAME, TOWN HALL LEVEL, MAX COUNT, POWER, PER HOUR/DAY, CYCLE DURATION...
 GID_BATTERIES = "22834069"   # batteries : NAME, TOWN HALL LEVEL, CAPACITY, MAX COUNT, UPGRADE DURATION, COST...
+GID_EDUCATIONALS = "1472421957"  # SCHOOL/UNIVERSITY : MODE, SLOTS, TRAINING TIME, REROLL COSTS, chances de talent...
+GID_HOUSES = "574490048"     # maisons : TOWN HALL LEVEL, MAX COUNT, RESIDENTS, UPGRADE DURATION, COST...
+GID_HATCHERIES = "272622660"  # couveuses : SLOTS, INCUBATION TIME DISCOUNT, UPGRADE DURATION, COST...
+GID_TOWNHALL = "1619227678"  # town hall : POWER CAPACITY, POWER RECOVERY STEP, POWER PER STEP/HOUR, COST...
+GID_BUILDINGS = "1669987517"  # tous les bâtiments : on n'en garde que les familles sans onglet dédié
 
 # Mapping ressource -> pool (maintenu à la main : non fourni par le Game Data officiel).
 POOLS = {
@@ -240,6 +245,92 @@ def parse_batteries(rows):
     return batteries
 
 
+TEXT_FIELDS = {"mode", "size"}   # colonnes non numériques lues telles quelles par parse_leveled
+
+
+def parse_leveled(rows, id_col, fields):
+    """Regroupe des lignes ID=NAME_niveau en {name: [niveaux...]}, en ne gardant que `fields`
+    ({clé data.json: colonne Sheet}). Sert aux onglets Educationals/Houses/Hatcheries/Buildings."""
+    out = {}
+    for row in rows:
+        m = ID_RE.match((row.get(id_col) or "").strip())
+        if not m:
+            continue
+        name, level = m.group(1), int(m.group(2))
+        entry = {"level": level}
+        for key, col in fields.items():
+            entry[key] = sym(row.get(col)) if key in TEXT_FIELDS or key.endswith(
+                ("_symbol", "_duration", "_time", "_discount")) else num(row.get(col))
+        out.setdefault(name, []).append(entry)
+    for levels in out.values():
+        levels.sort(key=lambda x: x["level"])
+    return out
+
+
+EDU_FIELDS = {
+    "mode": "MODE", "town_hall": "TOWN HALL LEVEL", "max_count": "MAX COUNT", "slots": "SLOTS",
+    "training_time": "TRAINING TIME", "reroll_power": "REROLL POWER COST", "reroll_article": "REROLL ARTICLE COST",
+    "upgrade_duration": "UPGRADE DURATION", "cost_symbol": "COST SYMBOL", "cost_amount": "COST AMOUNT",
+}
+EDU_TALENTS = ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"]
+
+
+def parse_educationals(rows):
+    """SCHOOL + UNIVERSITY. Ajoute les chances de talent (en %) à ce que parse_leveled extrait."""
+    edu = parse_leveled(rows, "ID", EDU_FIELDS)
+    by_id = {(r.get("ID") or "").strip(): r for r in rows}
+    for name, levels in edu.items():
+        for l in levels:
+            row = by_id[f"{name}_{l['level']}"]
+            l["talents"] = [ypct(row.get(f"{t} TALENT CHANCE")) for t in EDU_TALENTS]
+    return edu
+
+
+HOUSE_FIELDS = {"town_hall": "TOWN HALL LEVEL", "max_count": "MAX COUNT", "residents": "RESIDENTS",
+                "upgrade_duration": "UPGRADE DURATION", "cost_symbol": "COST SYMBOL", "cost_amount": "COST AMOUNT"}
+
+HATCH_FIELDS = {"town_hall": "TOWN HALL LEVEL", "max_count": "MAX COUNT", "slots": "SLOTS",
+                "incubation_discount": "INCUBATION TIME DISCOUNT", "upgrade_duration": "UPGRADE DURATION",
+                "cost_symbol": "COST SYMBOL", "cost_amount": "COST AMOUNT"}
+
+BUILDING_FIELDS = {"town_hall": "REQUIRED TOWN HALL LEVEL", "player_level": "UNLOCKED AT PLAYER LEVEL",
+                   "upgrade_duration": "UPGRADE DURATION", "cost_symbol": "COST SYMBOL",
+                   "cost_amount": "COST AMOUNT", "size": "SIZE", "max_count": "MAX COUNT"}
+
+# Familles de l'onglet Buildings qui ont déjà leur propre onglet (Sheet dédié plus riche) -> exclues.
+BUILDINGS_COVERED = ("TOWN_HALL_", "BATTERY_", "POWER_PLANT_", "HATCHERY_", "HOUSE_", "EDUCATIONAL_")
+
+
+def parse_buildings(rows):
+    """Bâtiments restants (WORKSHOP, VAULT, SECRET_LAB, RESEARCH_CENTER, EXCHANGE, PROFICIENCY)."""
+    kept = [r for r in rows if not (r.get("LEVEL ID") or "").strip().startswith(BUILDINGS_COVERED)]
+    out = parse_leveled(kept, "LEVEL ID", BUILDING_FIELDS)
+    # 'SECRET_LAB_secretLab_3x3_1' -> 'SECRET_LAB' (le suffixe est le nom d'asset, pas une variante utile)
+    return {re.sub(r"_[a-z].*$", "", name): levels for name, levels in out.items()}
+
+
+def parse_townhall(rows):
+    """Town hall : une seule progression -> liste de niveaux (colonne LEVEL, pas d'ID_NIVEAU)."""
+    levels = []
+    for row in rows:
+        lvl = num(row.get("LEVEL"))
+        if lvl is None:
+            continue
+        levels.append({
+            "level": int(lvl),
+            "unlock_level": num(row.get("UNLOCK LEVEL")),
+            "power_capacity": num(row.get("POWER CAPACITY")),
+            "recovery_step": sym(row.get("POWER RECOVERY STEP")),
+            "power_per_step": num(row.get("POWER PER STEP")),
+            "power_per_hour": num(row.get("POWER PER HOUR")),
+            "upgrade_duration": sym(row.get("UPGRADE DURATION")),
+            "cost_symbol": sym(row.get("COST SYMBOL")),
+            "cost_amount": num(row.get("COST AMOUNT")),
+        })
+    levels.sort(key=lambda x: x["level"])
+    return levels
+
+
 def select_resources(recipe_order):
     """Items retenus : factories (début → DYNAMITE inclus) + tout à partir de BOLTS + éléments bruts.
     On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
@@ -304,14 +395,33 @@ def main():
             for k in ("town_hall", "capacity", "max_count", "cost_amount"):
                 l[k] = compact(l[k])
 
-    output = {"resources": resources, "crafting": crafting, "powerplants": powerplants, "batteries": batteries}
+    educationals = parse_educationals(fetch_csv(GID_EDUCATIONALS))
+    houses = parse_leveled(fetch_csv(GID_HOUSES), "ID", HOUSE_FIELDS)
+    hatcheries = parse_leveled(fetch_csv(GID_HATCHERIES), "ID", HATCH_FIELDS)
+    buildings = parse_buildings(fetch_csv(GID_BUILDINGS))
+    townhall = parse_townhall(fetch_csv(GID_TOWNHALL))
+
+    for group in (educationals, houses, hatcheries, buildings):
+        for levels in group.values():
+            for l in levels:
+                for k, v in l.items():
+                    if k != "talents":
+                        l[k] = compact(v)
+    for l in townhall:
+        for k, v in l.items():
+            l[k] = compact(v)
+
+    output = {"resources": resources, "crafting": crafting, "powerplants": powerplants, "batteries": batteries,
+              "educationals": educationals, "houses": houses, "hatcheries": hatcheries,
+              "buildings": buildings, "townhall": townhall}
     with open("data.json", "w", encoding="utf-8") as f:        # minifié : fichier généré, jamais édité à la main
         json.dump(output, f, ensure_ascii=False, separators=(",", ":"))
 
     with_pool = sum(1 for r in resources if r["pool"])
     print(f"data.json généré : {len(resources)} ressources ({with_pool} avec pool), "
           f"{len(crafting)} ressources avec recette, {len(powerplants)} centrales (PowerPlants), "
-          f"{len(batteries)} batteries.")
+          f"{len(batteries)} batteries, {len(educationals)} educationals, {len(houses)} maisons, "
+          f"{len(hatcheries)} couveuses, {len(buildings)} bâtiments, {len(townhall)} niveaux de town hall.")
 
 
 if __name__ == "__main__":

@@ -27,13 +27,16 @@ function showTab(tab) {
   document.getElementById('tab-powerplant').classList.toggle('hidden', tab !== 'powerplant');
   document.getElementById('tab-batteries').classList.toggle('hidden', tab !== 'batteries');
   document.getElementById('tab-chains').classList.toggle('hidden', tab !== 'chains');
+  Object.keys(BUILDING_TABS).forEach(t => document.getElementById(`tab-${t}`).classList.toggle('hidden', tab !== t));
   // #tabs : uniquement les onglets de navigation (les boutons « À plat » portent aussi .tab-btn).
-  const order = ['chains', 'renta', 'crafting', 'powerplant', 'batteries'];
+  const order = ['chains', 'renta', 'crafting', 'powerplant', 'batteries',
+                 'school', 'houses', 'hatcheries', 'buildings', 'townhall'];
   document.querySelectorAll('#tabs .tab-btn').forEach((b, i) => b.classList.toggle('active', order[i] === tab));
   if (tab === 'crafting') renderCrafting();   // valeurs à jour (prix/mastery/bonus/taxe courants)
   if (tab === 'powerplant') renderPowerPlant();
   if (tab === 'batteries') renderBatteries();
   if (tab === 'chains') renderChains();
+  if (BUILDING_TABS[tab]) renderBuildingTab(tab);
 }
 
 // ── Renta ────────────────────────────────────────────────────────────────────
@@ -526,6 +529,116 @@ function renderBatteries() {
   }).join('');
 }
 
+// ── Onglets bâtiments (School / Maisons / Couveuses / Bâtiments / TownHall) ──
+// Ces tables du Game Data ont toutes la même forme (NOM_niveau -> niveaux) et ne diffèrent
+// que par leurs colonnes propres : une seule fonction de rendu pilotée par une spec.
+// Colonnes communes : Nom | Niveau | UpCost | Up Sum | <propres> | Durée upgrade | Coût | Qté coût.
+
+const durTd = v => `<td class="font-mono text-slate-300">${v ?? '—'}</td>`;
+const numTd = (v, d = 0) => `<td class="font-mono">${fmt(v, d)}</td>`;
+const TALENTS = ['Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire', 'Mythique'];
+
+const BUILDING_TABS = {
+  school: {
+    src: 'educationals', label: 'Bâtiment', cols: [
+      { th: 'Mode', td: l => `<td class="text-sky-300">${l.mode ?? '—'}</td>` },
+      { th: 'TH', td: l => numTd(l.town_hall) },
+      { th: 'Max', td: l => numTd(l.max_count) },
+      { th: 'Slots', td: l => `<td class="text-amber-400 font-mono">${fmt(l.slots, 0)}</td>` },
+      { th: 'Formation', td: l => durTd(l.training_time) },
+      { th: 'Reroll pow', td: l => numTd(l.reroll_power) },
+      { th: 'Reroll art', td: l => numTd(l.reroll_article) },
+    ].concat(TALENTS.map((t, i) => ({
+      th: `<span title="${t} talent chance">${t.slice(0, 3)}</span>`,
+      td: l => `<td class="font-mono text-slate-300">${l.talents[i] == null ? '—' : fmt(l.talents[i], 2) + ' %'}</td>`,
+    }))),
+  },
+  houses: {
+    src: 'houses', label: 'Maison', cols: [
+      { th: 'TH', td: l => numTd(l.town_hall) },
+      { th: 'Max', td: l => numTd(l.max_count) },
+      { th: 'Résidents', td: l => `<td class="text-amber-400 font-mono">${fmt(l.residents, 0)}</td>` },
+    ],
+  },
+  hatcheries: {
+    src: 'hatcheries', label: 'Couveuse', cols: [
+      { th: 'TH', td: l => numTd(l.town_hall) },
+      { th: 'Max', td: l => numTd(l.max_count) },
+      { th: 'Slots', td: l => `<td class="text-amber-400 font-mono">${fmt(l.slots, 0)}</td>` },
+      { th: 'Réduc. incub.', td: l => durTd(l.incubation_discount) },
+    ],
+  },
+  buildings: {
+    src: 'buildings', label: 'Bâtiment', cols: [
+      { th: 'TH', td: l => numTd(l.town_hall) },
+      { th: 'Niv. joueur', td: l => numTd(l.player_level) },
+      { th: 'Taille', td: l => `<td class="text-slate-300">${l.size ?? '—'}</td>` },
+      { th: 'Max', td: l => numTd(l.max_count) },
+    ],
+  },
+  townhall: {
+    src: 'townhall', label: null, cols: [       // une seule progression -> pas de colonne Nom
+      { th: 'Débloqué niv.', td: l => numTd(l.unlock_level) },
+      { th: 'Capacité pow', td: l => `<td class="text-amber-400 font-mono">${fmt(l.power_capacity, 0)}</td>` },
+      { th: 'Pas récup.', td: l => durTd(l.recovery_step) },
+      { th: 'Pow / pas', td: l => numTd(l.power_per_step) },
+      { th: 'Pow / h', td: l => `<td class="text-amber-400 font-mono">${fmt(l.power_per_hour, 0)}</td>` },
+    ],
+  },
+};
+
+const buildingFlat = {};   // vue à plat par onglet (défaut : true, comme PowerPlant/Batteries)
+Object.keys(BUILDING_TABS).forEach(t => (buildingFlat[t] = true));
+
+function toggleBuildingFlat(tab) {
+  buildingFlat[tab] = !buildingFlat[tab];
+  document.getElementById(`${tab}-flat-btn`).classList.toggle('active', buildingFlat[tab]);
+  document.getElementById(`${tab}-select`).disabled = buildingFlat[tab];
+  renderBuildingTab(tab);
+}
+
+function renderBuildingTab(tab) {
+  const cfg = BUILDING_TABS[tab];
+  const groups = DATA[cfg.src] || {};
+  const single = cfg.label == null;                 // townhall : liste plate, pas de familles
+  const flat = single || buildingFlat[tab];
+  const sel = single ? null : document.getElementById(`${tab}-select`).value;
+  if (!single) document.getElementById(`${tab}-res-th`).classList.toggle('hidden', !flat);
+
+  const entries = [];
+  if (single) (groups || []).forEach(l => entries.push({ name: null, l }));
+  else if (flat) Object.keys(groups).forEach(name => groups[name].forEach(l => entries.push({ name, l })));
+  else (groups[sel] || []).forEach(l => entries.push({ name: sel, l }));
+
+  const info = document.getElementById(`${tab}-info`);
+  if (info) info.textContent = (flat && !single)
+    ? `${entries.length} niveaux — ${Object.keys(groups).length} ${cfg.label.toLowerCase()}s`
+    : `${entries.length} niveaux`;
+
+  const costCell = v => v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : '<span class="spin neutral">&#8635;</span>')
+    : `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
+
+  const sumByName = {};   // coût d'évolution cumulé (COIN) depuis le niveau 1, par bâtiment
+  document.getElementById(`${tab}-body`).innerHTML = entries.map(({ name, l }) => {
+    const uc = CoinH.upgradeCost(l, priceByName);
+    const k = name || '_';
+    if (uc != null) sumByName[k] = (sumByName[k] || 0) + uc;
+    const nameTd = (!single && flat) ? `<td class="font-semibold text-white">${name}</td>` : '';
+    return `<tr>
+      ${nameTd}<td><span class="badge bg-indigo-900 text-indigo-300">${l.level}</span></td>
+      <td>${costCell(uc)}</td>
+      <td>${costCell(sumByName[k] ?? null)}</td>
+      ${cfg.cols.map(c => c.td(l)).join('')}
+      <td class="font-mono text-slate-300">${l.upgrade_duration ?? '—'}</td>
+      <td class="text-sky-300">${l.cost_symbol ?? '—'}</td>
+      <td class="font-mono">${fmt(l.cost_amount, 0)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBuildingTabs() { Object.keys(BUILDING_TABS).forEach(renderBuildingTab); }
+
 // ── GeckoTerminal price fetch (prix en COIN, 1 appel multi-pools) ─────────────
 const POOL_API = 'https://api.geckoterminal.com/api/v2/networks/ronin/pools/multi/';
 
@@ -596,6 +709,7 @@ async function fetchAllPrices() {
     renderPowerPlant();   // colonne coin/kpow de l'onglet PowerPlant
     renderBatteries();   // colonnes UpCost & up capa/coin de l'onglet Batteries
     renderChains();      // rentabilité de chaîne (dépend des prix live)
+    renderBuildingTabs();   // UpCost / Up Sum des onglets bâtiments
   }
 }
 
@@ -890,6 +1004,16 @@ async function init() {
     renderPowerPlant();
     renderBatteries();
     renderChains();
+
+    // Sélecteurs des onglets bâtiments (désactivés par défaut : vue à plat)
+    Object.keys(BUILDING_TABS).forEach(t => {
+      const sel = document.getElementById(`${t}-select`);
+      if (!sel) return;                       // townhall : progression unique, pas de sélecteur
+      Object.keys(DATA[BUILDING_TABS[t].src] || {}).forEach(n => { sel.innerHTML += `<option value="${n}">${n}</option>`; });
+      sel.disabled = buildingFlat[t];
+    });
+    renderBuildingTabs();
+
     fetchAllPrices();
   } catch (e) {
     document.body.innerHTML += `<div class="fixed bottom-4 right-4 bg-red-900 text-red-200 p-4 rounded-xl text-sm">
