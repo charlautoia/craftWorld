@@ -109,8 +109,8 @@ function onSellChange(name, checked) { sellFlag[name] = checked; saveLS(LS_SELL,
 
 // Le niveau est éditable depuis l'onglet Prix ET l'onglet Chaînes : on rafraîchit les deux.
 function onLevelChange(name, val) { factoryLevel[name] = +val; saveLS(LS_LEVELS, factoryLevel); renderRenta(); renderChains(); }
-function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); }
-function onBonusChange(name, val) { bonusPct[name] = +val; saveLS(LS_BONUS, bonusPct); renderRenta(); }
+function onMasteryChange(name, val) { mastery[name] = +val; saveLS(LS_MASTERY, mastery); renderRenta(); renderChains(); }
+function onBonusChange(name, val) { bonusPct[name] = +val; saveLS(LS_BONUS, bonusPct); renderRenta(); renderChains(); }
 
 // Colonne Mastery : input éditable (uniquement si la recette a au moins un input).
 function masteryCell(r) {
@@ -879,6 +879,25 @@ function renderChains() {
        class="text-xs bg-slate-800 border border-slate-600 rounded px-1 py-0.5">${opts}</select>`;
   };
 
+  // ── Colonnes reprises des onglets Prix et Crafting (mêmes données, même état) ───────
+  // Elles décrivent l'USINE de la ligne au niveau choisi, pas la chaîne entière.
+  const resOf = n => DATA.resources.find(x => x.name === n);
+  const costCell = v => v == null
+    ? (pricesLoaded ? '<span class="neutral">—</span>' : wait)
+    : `<span class="text-rose-300 font-mono">${fmtPrice(v)}</span>`;
+  // Up Sum : coût cumulé pour amener l'usine du niveau 1 au niveau choisi (comme l'onglet Crafting,
+  // mais arrêté au niveau de la ligne puisqu'ici une ressource = une seule ligne).
+  const upSum = n => {
+    let sum = null;
+    for (const l of DATA.crafting[n] || []) {
+      if (l.level > factoryLevel[n]) break;
+      const uc = CoinH.upgradeCost(l, priceByName);
+      if (uc != null) sum = (sum || 0) + uc;
+    }
+    return sum;
+  };
+  const inputCell = sym => sym ? `<span class="text-sky-300">${shortName(sym)}</span>` : '—';
+
   const stepsCache = {};
   const stepCount = n => (n in stepsCache ? stepsCache[n] : (stepsCache[n] = chainSteps(n, ctx).length));
   document.getElementById('chains-body').innerHTML = names.map(name => {
@@ -888,7 +907,7 @@ function renderChains() {
       <td class="font-semibold text-white">${shortName(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
-      <td colspan="10" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
+      <td colspan="21" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
     // Prix net encaissé = marge + coût matières (par construction de chainMetrics) : garantit que la
     // colonne affichée est exactement celle qui a servi au calcul de la marge.
@@ -917,6 +936,8 @@ function renderChains() {
       : (best ? `<span class="text-emerald-400" title="À produire : ${fmtPrice((valueAdd(name) || {}).added)} de plus par unité que vendre ses inputs.">★ </span>` : '');
     // Ligne sans ★ : on dit de combien son étape détruit de la valeur.
     const v = valueAdd(name);
+    const recipe = ctx.recipeOf(name);      // recette au niveau choisi : colonnes Up Cost / inputs
+    const r = resOf(name);                  // entrée data.json : colonnes 24h / Mastery / Speed bonus
     const hint = (best || bought || !v || v.added > 0) ? ''
       : ` title="Étape perdante : ${fmtPrice(v.added)} par unité — vendre ses inputs rapporte plus."`;
     return `<tr${trAttr}${hint}>
@@ -925,15 +946,25 @@ function renderChains() {
       <td class="text-center">${boughtCell(name)}</td>
       <td>${signCell(m.coinH)}</td>
       <td>${signCell(m.coinKPow)}</td>
+      <td>${costCell(CoinH.upgradeCost(recipe, priceByName))}</td>
+      <td>${costCell(upSum(name))}</td>
       <td>${signCell(m.margin)}</td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.cost)}</span></td>
       <td><span class="text-rose-300 font-mono">${fmtPrice(m.directCost)}</span></td>
+      <td>${inputCell(recipe && recipe.input1)}</td>
+      <td class="font-mono">${fmt(recipe && recipe.input1_amount, 2)}</td>
+      <td>${inputCell(recipe && recipe.input2)}</td>
+      <td class="font-mono">${fmt(recipe && recipe.input2_amount, 2)}</td>
       <td><span class="text-amber-300 font-mono">${fmtPrice(m.margin + m.cost)}</span></td>
       <td><span class="text-rose-300 font-mono">${buyPriceCell(name)}</span></td>
+      <td class="font-mono text-slate-300">${priceByName(name) == null ? (pricesLoaded ? '—' : wait) : fmtPrice(priceByName(name))}</td>
+      <td>${r ? dayCell(r) : '—'}</td>
       <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
       <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
       <td>${gl}</td>
       <td class="font-mono text-slate-400">${steps}</td>
+      <td class="font-mono text-slate-300 whitespace-nowrap">${r ? masteryCell(r) : '—'}</td>
+      <td class="font-mono text-slate-300 whitespace-nowrap">${r ? bonusCell(r) : '—'}</td>
     </tr>`;
   }).join('');
 }
