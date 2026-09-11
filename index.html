@@ -419,7 +419,6 @@
       <select id="chains-select" onchange="renderChains()" class="w-48"></select>
       <button id="chains-flat-btn" onclick="toggleChainsFlat()"
         class="tab-btn active px-3 py-2 rounded-lg text-sm font-medium bg-slate-700">À plat</button>
-      <span class="text-slate-500 text-sm" id="chains-info"></span>
     </div>
     <div class="rounded-xl overflow-hidden border border-slate-700">
       <div class="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -456,6 +455,7 @@
         </table>
       </div>
     </div>
+    <p class="text-slate-500 text-sm mt-3" id="chains-info"></p>
     <p class="text-xs text-slate-500 mt-3">
       Chaîne remontée automatiquement depuis les recettes jusqu'aux matières sans recette (achetées).
       Les intermédiaires ne passent pas par le marché : taxe d'achat sur les matières de base, taxe de
