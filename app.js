@@ -907,14 +907,10 @@ function renderChains() {
       <td class="font-semibold text-white">${shortName(name)}</td>
       <td>${levelCell(name)}</td>
       <td class="text-center">${boughtCell(name)}</td>
-      <td colspan="21" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
+      <td colspan="20" class="neutral">${pricesLoaded ? 'prix manquant dans la chaîne' : wait}</td>
     </tr>`;
     // Prix net encaissé = marge + coût matières (par construction de chainMetrics) : garantit que la
     // colonne affichée est exactement celle qui a servi au calcul de la marge.
-    // Goulot : rouge si c'est l'usine de la ligne elle-même, sinon c'est une étape amont.
-    const gl = m.bottleneck === name
-      ? `<span class="text-rose-300">${shortName(m.bottleneck)}</span>`
-      : `<span class="text-slate-400">${m.bottleneck ? shortName(m.bottleneck) : '—'}</span>`;
     // Ligne achetée : atténuée, car elle ne fait plus partie de la chaîne — ses chiffres restent
     // affichés pour montrer l'économie de production à laquelle on renonce.
     // Deux repères, tous deux ACTIONNABLES :
@@ -961,7 +957,6 @@ function renderChains() {
       <td>${r ? dayCell(r) : '—'}</td>
       <td class="font-mono text-slate-300">${fmt(m.power / 1000, 1)}</td>
       <td class="font-mono text-slate-300">${fmt(m.rate, 3)}</td>
-      <td>${gl}</td>
       <td class="font-mono text-slate-400">${steps}</td>
       <td class="font-mono text-slate-300 whitespace-nowrap">${r ? masteryCell(r) : '—'}</td>
       <td class="font-mono text-slate-300 whitespace-nowrap">${r ? bonusCell(r) : '—'}</td>

@@ -193,7 +193,6 @@ test('chainMetrics : chaîne à 1 étape = coût matière achetée + power de l\
   near(m.rate, 2);                             // 1 unité / 1h, ×2 (bonus vidéo)
   near(m.coinH, 5 * 2);
   near(m.coinKPow, 5 * 1000 / 5000);
-  assert.strictEqual(m.bottleneck, 'B');       // seule usine de la chaîne
 });
 
 test('chainMetrics : l\'intermédiaire n\'est ni acheté ni vendu (aucune taxe dessus)', () => {
@@ -209,20 +208,21 @@ test('chainMetrics : l\'intermédiaire n\'est ni acheté ni vendu (aucune taxe d
   near(m.margin, 100 * 0.9 - 66);
 });
 
-test('chainMetrics : le goulot est l\'étape la plus lente de la chaîne', () => {
-  // M produit 1/h (×2 = 2/h) ; F en consomme 3 par unité -> F plafonné à 0,667/h alors que
-  // sa propre usine pourrait faire 2/h. Le goulot est donc M, pas F.
+test("chainMetrics : le débit est celui de l'usine finale SEULE, jamais bridé par l'amont", () => {
+  // M produit 1/h (×2 = 2/h) et F en consomme 3 par unité : l'ancien modèle plafonnait F à 0,667/h.
+  // On suppose désormais l'amont approvisionné (plusieurs usines possibles) -> F tourne à son propre débit.
   const recipes = {
     M: { output: 1, duration: '1:00:00', input1: 'A', input1_amount: 2, power: 1000 },
     F: { output: 1, duration: '1:00:00', input1: 'M', input1_amount: 3, power: 2000 },
   };
   const m = chainMetrics('F', mkCtx(recipes, { A: 1, F: 100 }));
-  near(m.rate, 2 / 3);
-  assert.strictEqual(m.bottleneck, 'M');
-  // Speed bonus sur M : le goulot bascule sur F une fois M assez rapide.
+  near(m.rate, 2);
+  // Accélérer l'amont ne change donc plus rien au débit de F.
   const m2 = chainMetrics('F', mkCtx(recipes, { A: 1, F: 100 }, { speed: { M: 3 } }));
   near(m2.rate, 2);
-  assert.strictEqual(m2.bottleneck, 'F');
+  // Seul le Speed bonus de F lui-même compte.
+  const m3 = chainMetrics('F', mkCtx(recipes, { A: 1, F: 100 }, { speed: { F: 1 } }));
+  near(m3.rate, 4);
 });
 
 test('chainMetrics : recette à 2 inputs (arbre, pas une ligne)', () => {
@@ -288,7 +288,6 @@ test('chainMetrics : une ressource de base (recette sans input) est comptée au 
   near(f.cost, 3 * 10 * 1.1);                  // 33 : E achetée, taxe d'achat comprise (et non 0)
   near(f.directCost, f.cost);                  // acheter E ou « la produire » revient au même
   near(f.power, 2000);                         // on n'exploite pas la mine de E -> son power ne compte pas
-  assert.strictEqual(f.bottleneck, 'F');       // E achetée : approvisionnement illimité, jamais le goulot
 
   // À la racine, E garde sa propre recette : sa ligne montre bien son économie de production.
   const e = chainMetrics('E', ctx);
@@ -314,7 +313,6 @@ test('chainMetrics : ctx.boughtOf coupe la chaîne et prend le prix du marché',
   near(achete.cost, 2 * 20);                        // 40 : M pris au marché -> moins cher
   near(achete.power, 2000);                         // l'usine M ne tourne plus : son power disparaît
   assert.ok(achete.margin > produit.margin, 'acheter M améliore la marge de F');
-  assert.strictEqual(achete.bottleneck, 'F');       // M acheté : approvisionnement illimité
 
   // La ligne de M elle-même garde sa recette (racine), même marquée « achetée ».
   const m = chainMetrics('M', ctx);

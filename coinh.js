@@ -121,13 +121,15 @@
 
   // ── Chaîne de production ────────────────────────────────────────────────────
   // Remonte l'arbre des recettes depuis `name` jusqu'aux ressources sans recette (achetées au marché),
-  // et cumule coût matières / power / débit. Les intermédiaires ne transitent pas par le marché :
+  // et cumule coût matières / power. Les intermédiaires ne transitent pas par le marché :
   // seules les feuilles sont achetées (buyFactor) et seul `name` est vendu (sellFactor).
   // Les recettes à 2 inputs font de la chaîne un ARBRE, pas une ligne (24 recettes concernées).
   // ctx = { recipeOf(name)->recette|null, priceOf(name)->prix|null, masteryOf(name)->%,
   //         speedOf(name)->fraction (Speed bonus Workshop), boughtOf(name)->bool (optionnel :
   //         ressource achetée au marché au lieu d'être produite), buyFactor, sellFactor }
-  // Retourne { cost, power, rate, bottleneck } par unité produite, ou null si non calculable.
+  // Retourne { cost, power } par unité produite, ou null si non calculable.
+  // Le DÉBIT n'est pas remonté : on ne bride pas la chaîne sur son étape la plus lente (l'user peut
+  // avoir plusieurs usines par étape et gère l'approvisionnement lui-même). Voir chainMetrics.
   // `asInput` : true quand `name` est consommé par une autre recette, false à la racine de la chaîne.
   function chainNode(name, ctx, memo, stack, asInput) {
     const key = name + (asInput ? '|in' : '|root');
@@ -143,16 +145,13 @@
     const bought = !!ctx.boughtOf && !!ctx.boughtOf(name);
     if (!recipe || (asInput && (base || bought))) {     // feuille : matière achetée au marché
       const p = ctx.priceOf(name);
-      const leaf = p == null ? null
-        : { cost: p * ctx.buyFactor, power: 0, rate: Infinity, bottleneck: null, raw: true };
+      const leaf = p == null ? null : { cost: p * ctx.buyFactor, power: 0, raw: true };
       return (memo[key] = leaf);
     }
     const B = recipe.output, hrs = durationHours(recipe.duration);
     if (!B || hrs == null) return (memo[key] = null);
     const yf = yieldFactor(recipe.yield_pct, ctx.masteryOf(name));
     let cost = 0, power = (recipe.power || 0) / B;
-    let rate = B / (hrs / (2 * (1 + (ctx.speedOf(name) || 0))));   // débit de CETTE usine (bonus vidéo *2)
-    let bottleneck = name;
     const inputs = [[recipe.input1, recipe.input1_amount], [recipe.input2, recipe.input2_amount]];
     for (const [symb, amt] of inputs) {
       if (!symb || !amt) continue;
@@ -161,10 +160,8 @@
       if (!sub) return (memo[key] = null);
       cost += per * sub.cost;
       power += per * sub.power;
-      const upstream = sub.rate / per;                  // débit amont converti en unités de `name`
-      if (upstream < rate) { rate = upstream; bottleneck = sub.bottleneck; }
     }
-    return (memo[key] = { cost, power, rate, bottleneck, raw: false });
+    return (memo[key] = { cost, power, raw: false });
   }
 
   // Coût des inputs de la SEULE usine `name`, achetés au marché (taxe d'achat comprise), par unité produite.
@@ -187,7 +184,7 @@
   }
 
   // Rentabilité de la chaîne complète menant à `name` (voir chainNode).
-  // coinH = marge * débit de la chaîne (bridé par le goulot) ; coinKPow = marge par 1000 de power cumulé.
+  // coinH = marge * débit de l'usine FINALE seule ; coinKPow = marge par 1000 de power cumulé.
   // Retourne null si `name` n'a pas de recette ou si un prix de la chaîne manque.
   function chainMetrics(name, ctx) {
     const n = chainNode(name, ctx, {}, [], false);
@@ -201,6 +198,10 @@
     // détruit de la valeur, même si la chaîne complète reste bénéficiaire grâce à l'amont produit maison.
     // Une recette sans input (EARTH) n'a rien à acheter : sa marge d'étape est son prix net.
     const rec = ctx.recipeOf(name);
+    // Débit de l'usine de `name` SEULE (bonus vidéo *2) : l'amont est supposé approvisionné.
+    const hrs = rec ? durationHours(rec.duration) : null;
+    const rate = (!rec || !rec.output || hrs == null) ? null
+      : rec.output / (hrs / (2 * (1 + (ctx.speedOf(name) || 0))));
     const hasInputs = !!(rec && (rec.input1 || rec.input2));
     const stepMargin = !hasInputs ? p * ctx.sellFactor
       : (direct == null ? null : p * ctx.sellFactor - direct);
@@ -209,10 +210,9 @@
       directCost: direct,                               // coût des inputs de cette usine seule, achetés
       stepMargin,                                       // marge de l'usine seule (null si non calculable)
       power: n.power,                                   // power cumulé de toute la chaîne, par unité
-      rate: n.rate,                                     // unités/h (1 usine par étape, bridé par le goulot)
-      bottleneck: n.bottleneck,                         // étape qui bride la chaîne
+      rate,                                             // unités/h de l'usine finale seule
       margin,
-      coinH: margin * n.rate,
+      coinH: rate == null ? null : margin * rate,
       coinKPow: n.power ? margin * 1000 / n.power : null,
     };
   }
