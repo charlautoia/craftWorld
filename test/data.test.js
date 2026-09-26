@@ -55,3 +55,18 @@ test('coût d\'évolution en COIN calculable dès que le symbole a un prix', () 
   const l1 = DATA.educationals.SCHOOL.find(x => x.level === 1);
   assert.strictEqual(upgradeCost(l1, price), null);       // niveau 1 : pas de coût
 });
+
+test('chaque input de recette est une ressource connue avec une pool (chaînes calculables)', () => {
+  // Régression : BEAM consomme du LUMBER, absent du Game Data -> toute la branche
+  // BEAM/BRICK/TILE/NAIL/PAINT affichait « prix manquant dans la chaîne ».
+  const known = new Map(DATA.resources.map(r => [r.name, r]));
+  for (const [name, levels] of Object.entries(DATA.crafting)) {
+    for (const l of levels) {
+      for (const inp of [l.input1, l.input2]) {
+        if (!inp) continue;
+        assert.ok(known.has(inp), `${name}_${l.level} : input ${inp} inconnu de data.json`);
+        assert.ok(known.get(inp).pool, `${name}_${l.level} : input ${inp} sans pool`);
+      }
+    }
+  }
+});

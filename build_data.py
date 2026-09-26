@@ -76,6 +76,15 @@ POOLS = {
     "SALT": "0x98b539ff43aa3dd2a9284f6d9bc5a0a586ba4da0",
     "ARTICLE": "0x2e75c0bf22eba42ed6ee83ba208078bc5c0daf8d",
     "DIPLOMA": "0x0450dbf6f748709d7c01f4dc556643e1220c9227",
+    # Matériaux de construction (BEAM/BRICK/TILE/NAIL/PAINT) : absents du Notion officiel, pools trouvées
+    # par symbole sur GeckoTerminal (une seule pool RESOURCE/COIN 1 % par token, faible liquidité).
+    "BEAM": "0x12f2ffae365bb0ec481bb6bb4cda9ef60ec32921",
+    "BRICK": "0x8f32b16fc2574a7c35251772ddd287709a1fa919",
+    "TILE": "0xea6750832ea32eb79caaac746c12abf3e812388e",
+    "NAIL": "0x88f31ca9087aaa60a217637e6ddeced29370094f",
+    "PAINT": "0xc4be5660ea4ad6ceb30eeef56d327b4ff22f5822",
+    # LUMBER : input de BEAM, absent du Game Data (aucune recette) -> matière brute achetée, comme FIRE/WATER.
+    "LUMBER": "0x615dbabd91f0eb79b59c720f5ec2b3fe0ae61055",
 }
 
 # Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
@@ -84,7 +93,7 @@ POOLS = {
 INVERTED = {"COPPER"}
 
 # Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
-ELEMENTS = ["EARTH", "FIRE", "WATER", "DUST"]
+ELEMENTS = ["EARTH", "FIRE", "WATER", "DUST", "LUMBER"]
 
 # Ordre d'affichage préféré (choix user) : ces ressources en tête, puis le reste dans l'ordre du Game Data.
 PREFERRED_ORDER = ["EARTH", "MUD", "CLAY", "SAND", "COPPER", "STEEL", "SCREWS", "WATER", "SEAWATER",
@@ -358,7 +367,7 @@ def main():
     crafting = {k: v for k, v in crafting.items() if k in included}
 
     # Ordre de base (Game Data) : EARTH, WATER, FIRE puis l'ordre du Sheet.
-    base_order = ["EARTH", "WATER", "FIRE", "DUST"] + [n for n in recipe_order if n in included]
+    base_order = ["EARTH", "WATER", "FIRE", "DUST", "LUMBER"] + [n for n in recipe_order if n in included]
     base_order += [n for n in sorted(included) if n not in base_order]   # filet de sécurité
     # Ordre d'affichage : préférence user en tête, puis le reste dans l'ordre de base.
     game_order = [n for n in PREFERRED_ORDER if n in included]

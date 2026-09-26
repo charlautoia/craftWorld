@@ -552,3 +552,20 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
           FUEL et SCREWS » ou « ✘ NE FAIS PAS DE OIL — −94,6 par unité, vends ton FUEL à la place ».
           La ★ suit le verdict : sur la ressource si elle vaut le coup, sinon sur l'input à vendre.
         - Vue à plat : ★ sur les 18 ressources dont l'étape finale crée de la valeur.
+
+50. [x] **Nouveaux matériaux de construction : BEAM, BRICK, TILE, NAIL, PAINT (+ LUMBER).**
+        - Game Data re-synchronisé (`build_data.py`) : mêmes 11 onglets, aucune ressource ajoutée depuis #40.
+          Seul changement dans les recettes : l'**XP** de DYNONEST, SANDWRAP, STEAMWRAP, BOOK, SALT, ARTICLE,
+          DIPLOMA (valeur provisoire 25 → vraies valeurs, ex. BOOK 1 000, STEAMWRAP 750 000).
+        - Les 5 matériaux ont désormais un **token et une pool** RESOURCE/COIN 1 % (une seule par token, 55 à
+          95 $ de liquidité). Absents du Notion officiel : pools trouvées par symbole sur GeckoTerminal,
+          quote vérifié = même COIN (`0x7dc1…a9a7`) que les autres pools. Ajoutées à `POOLS` → 53/53 prix.
+        - **LUMBER** : input de BEAM, **absent du Game Data** (ni Factories ni Mines). Ajouté comme matière
+          brute achetée (`ELEMENTS`, comme FIRE/WATER/DUST) avec sa pool LUMBER/COIN. Sans lui, toute la
+          branche affichait « prix manquant dans la chaîne ».
+        - **Recettes provisoires dans le Sheet** : 1 seul niveau, durée **1 minute**, BEAM sans power →
+          coin/h aberrants (PAINT ~480 000 coin/h). Marge/u et Coût mat. restent exploitables ; le coin/h
+          ne vaudra quelque chose qu'une fois les vraies durées publiées par la team (relancer `build_data.py`).
+        - Pas d'icône (ni dans le media kit connu, ni en logo GeckoTerminal) → repli sur 4 lettres
+          (BEAM, BRIC, TILE, NAIL, PAIN, LUMB), sans collision.
+        - Test de non-régression : tout input de recette doit être une ressource connue **avec pool**.
