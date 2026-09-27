@@ -974,7 +974,7 @@ async function init() {
     // Vente : cochée par défaut (on vend ce qu'on produit). Achat : coché seulement si un input n'a
     // aucune recette (EARTH/WATER/FIRE/DUST) — il ne peut alors venir que du marché.
     DATA.resources.forEach(r => { if (r.level != null) {
-      factoryLevel[r.name] = r.level; mastery[r.name] = 5.3; bonusPct[r.name] = (r.bonus || 0) * 100;
+      factoryLevel[r.name] = r.level; mastery[r.name] = r.mastery != null ? r.mastery : 5.3; bonusPct[r.name] = (r.bonus || 0) * 100;
       sellFlag[r.name] = true;
       buyFlag[r.name] = (DATA.crafting[r.name] || []).some(l =>
         [l.input1, l.input2].some(i => i && !DATA.crafting[i]));

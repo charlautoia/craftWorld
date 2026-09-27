@@ -70,3 +70,23 @@ test('chaque input de recette est une ressource connue avec une pool (chaînes c
     }
   }
 });
+
+test('niveaux relevés dans le jeu : l\'appli retombe sur Speed et Input de l\'écran d\'usine', () => {
+  // Captures du 2026-09-27 : BEAM 18 = 17,7/min, BRICK 14 = 3,76/min, TILE 3 = 1,8/h.
+  // Mastery par défaut 0 (inputs déjà réduits par le jeu), Speed bonus 0.
+  const CoinH = require('../coinh.js');
+  const game = { BEAM: [18, 17.7 * 60, 2140], BRICK: [14, 3.76 * 60, 457], TILE: [3, 1.8, 198] };
+  for (const [name, [lvl, perHour, input1]] of Object.entries(game)) {
+    const r = DATA.resources.find(x => x.name === name);
+    assert.strictEqual(r.level, lvl, `${name} : niveau actuel`);
+    assert.strictEqual(r.mastery, 0, `${name} : mastery par défaut`);
+    const recipe = DATA.crafting[name].find(l => l.level === lvl);
+    const ctx = { recipeOf: n => (n === name ? recipe : null), priceOf: () => 1,
+      masteryOf: () => r.mastery, speedOf: () => 0, buyFactor: 1, sellFactor: 1 };
+    const m = CoinH.chainMetrics(name, ctx);
+    assert.ok(Math.abs(m.rate / perHour - 1) < 0.01, `${name} : débit ${m.rate} vs jeu ${perHour}/h`);
+    // yield du niveau + mastery 0 -> facteur 1 : l'input reste celui affiché par le jeu
+    assert.strictEqual(CoinH.yieldFactor(recipe.yield_pct, r.mastery), 1);
+    assert.strictEqual(recipe.input1_amount, input1);
+  }
+});

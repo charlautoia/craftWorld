@@ -569,3 +569,15 @@ Réseau : Ronin. Prix live : API GeckoTerminal (endpoint multi-pools).
         - Pas d'icône (ni dans le media kit connu, ni en logo GeckoTerminal) → repli sur 4 lettres
           (BEAM, BRIC, TILE, NAIL, PAIN, LUMB), sans collision.
         - Test de non-régression : tout input de recette doit être une ressource connue **avec pool**.
+
+51. [x] **BEAM, BRICK, TILE : recettes relevées dans le jeu** (le Sheet n'a qu'une recette provisoire à 1 min).
+        - `build_data.py` : **`GAME_LEVELS`** (niveau actuel + niveau suivant d'après les « +… » de l'écran
+          d'usine) **remplace** les lignes du Game Data pour ces 3 ressources ; `CURRENT_LEVELS` : BEAM 18,
+          BRICK 14, TILE 3. Recettes réelles très différentes du Sheet (BRICK_14 : 457 BEAM + 549 CLAY → 94).
+        - Conversion écran → modèle : **durée de base = 2 × durée affichée** (le jeu montre la durée effective,
+          bonus vidéo inclus ; Speed bonus Workshop supposé 0) ; **input = valeur affichée** avec
+          `yield_pct` = yield affiché et **mastery par défaut 0** (nouveau champ `resources[].mastery`, lu par
+          `app.js` à la place du 5,3 global) ; XP par unité = XP/min × durée / output.
+        - Contrôles : Output / durée = Speed du jeu sur les 3 écrans ; XP/unité constante entre niveaux.
+        - Test de non-régression : l'appli retombe sur le débit et l'input des captures.
+        - Restent provisoires (pas de relevé) : **NAIL** et **PAINT** ; coût d'upgrade (bannière rouge, sans pool).

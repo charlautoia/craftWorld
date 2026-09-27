@@ -107,7 +107,7 @@ CURRENT_LEVELS = {
     "SEAWATER": 30, "ALGAE": 20, "OXYGEN": 20, "GAS": 15, "FUEL": 15, "OIL": 10,
     "HEAT": 29, "LAVA": 19, "GLASS": 5, "SULFUR": 2, "FIBERGLASS": 2, "CERAMICS": 10,
     "STONE": 8, "STEAM": 1, "CEMENT": 9, "ACID": 5, "PLASTICS": 4, "ENERGY": 5,
-    "HYDROGEN": 5, "DYNAMITE": 5,
+    "HYDROGEN": 5, "DYNAMITE": 5, "BEAM": 18, "BRICK": 14, "TILE": 3,
 }
 
 # Speed bonus de production par usine (relevé dans le jeu, écran Workshop) ; coin/h via (1 + bonus).
@@ -340,6 +340,41 @@ def parse_townhall(rows):
     return levels
 
 
+# Niveaux relevés DANS LE JEU (écran de l'usine), qui REMPLACENT ceux du Game Data : pour ces ressources le
+# Sheet n'a qu'une recette provisoire (niveau 1, durée 1 min). Relevé du 2026-09-27 : niveau actuel + niveau
+# suivant (valeurs « +… » de l'écran).
+#  - Input : valeur affichée par le jeu, yield/mastery DÉJÀ appliqués -> stockée avec yield_pct = yield affiché
+#    et mastery par défaut 0 (GAME_MASTERY) : le calcul retombe exactement sur l'input du jeu.
+#  - Durée : le jeu affiche la durée EFFECTIVE (bonus vidéo x2 inclus, Speed bonus Workshop supposé 0 pour
+#    ces nouvelles usines) -> durée de base = 2 x durée affichée. Vérifié : Output / durée affichée = Speed.
+#  - XP : par unité produite = XP/min x durée affichée / output (constant d'un niveau à l'autre).
+#  - Valeurs arrondies par le jeu : LUMBER « 2,14k » (BEAM 18), power « 4,5k » (TILE 3).
+#  - Coût d'upgrade : payé avec un objet (bannière rouge) sans pool -> non repris.
+# (niveau, output, durée de base, input1, qté1, input2, qté2, yield %, power, xp/unité)
+GAME_LEVELS = {
+    "BEAM": [(18, 443, "0:50:00", "LUMBER", 2140, None, None, 103.7, 837, 50),
+             (19, 509, "0:55:00", "LUMBER", 2459, None, None, 103.7, 952, 50)],
+    "BRICK": [(14, 94, "0:50:00", "BEAM", 457, "CLAY", 549, 102.9, 896, 225),
+              (15, 116, "1:00:00", "BEAM", 564, "CLAY", 678, 102.9, 1095, 225)],
+    "TILE": [(3, 3, "3:20:00", "BRICK", 198, "HEAT", 6, 100, 4500, 5000),
+             (4, 4, "3:30:00", "BRICK", 264, "HEAT", 8, 100, 6000, 5000)],
+}
+GAME_MASTERY = {n: 0 for n in GAME_LEVELS}   # inputs relevés déjà réduits par le yield du jeu
+
+
+def game_levels(rows):
+    """Recettes au format parse_recipes depuis GAME_LEVELS ; Δ Prod recalculé entre niveaux successifs."""
+    out, prev = [], None
+    for lvl, o, dur, i1, a1, i2, a2, y, pw, xp in rows:
+        rate = o / (sum(int(x) * f for x, f in zip(dur.split(":"), (3600, 60, 1))))
+        out.append({"level": lvl, "output": o, "duration": dur, "input1": i1, "input1_amount": a1,
+                    "input2": i2, "input2_amount": a2, "yield_pct": y, "power": pw, "xp": xp,
+                    "cost_symbol": None, "cost_amount": None,
+                    "production_change_pct": None if prev is None else round((rate / prev - 1) * 100, 2)})
+        prev = rate
+    return out
+
+
 def select_resources(recipe_order):
     """Items retenus : factories (début → DYNAMITE inclus) + tout à partir de BOLTS + éléments bruts.
     On exclut le bloc food/outils/armes (BOWL → LOBSTER) situé entre DYNAMITE et BOLTS."""
@@ -360,6 +395,8 @@ def main():
     # Les ressources de base ne doivent pas écraser une éventuelle recette du même nom.
     for name, levels in base.items():
         crafting.setdefault(name, levels)
+    for name, rows in GAME_LEVELS.items():   # relevés du jeu > recette provisoire du Sheet
+        crafting[name] = game_levels(rows)
     for levels in crafting.values():
         levels.sort(key=lambda x: x["level"])
 
@@ -384,6 +421,8 @@ def main():
             entry["level"] = max(avail[0], min(lvl, avail[-1]))
         if BONUS.get(n):
             entry["bonus"] = BONUS[n]
+        if n in GAME_MASTERY:
+            entry["mastery"] = GAME_MASTERY[n]   # défaut de la colonne Mastery (sinon 5,3 côté appli)
         resources.append(entry)
 
     for levels in crafting.values():       # allège : flottants entiers -> int
