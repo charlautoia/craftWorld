@@ -113,8 +113,9 @@ CURRENT_LEVELS = {
 # Speed bonus de production par usine (relevé dans le jeu, écran Workshop) ; coin/h via (1 + bonus).
 # = défaut de la colonne "Speed bonus" (éditable dans l'UI). MAJ quand tu montes une usine.
 BONUS = {
-    "SEAWATER": 0.54, "ALGAE": 0.47, "CERAMICS": 0.39, "STEEL": 0.39, "OXYGEN": 0.39,
-    "GAS": 0.25, "FUEL": 0.25, "SCREWS": 0.52, "STONE": 0.09, "HEAT": 0.10, "LAVA": 0.10,
+    "SEAWATER": 0.54, "ALGAE": 0.47, "CERAMICS": 0.39, "STEEL": 0.47, "OXYGEN": 0.39,
+    "GAS": 0.25, "FUEL": 0.25, "SCREWS": 0.52, "STONE": 0.09, "CEMENT": 0.18, "OIL": 0.18, "ACID": 0.18,
+    "HEAT": 0.10, "LAVA": 0.10,
 }
 
 ID_RE = re.compile(r"^(.+)_(\d+)$")
