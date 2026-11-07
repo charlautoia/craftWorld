@@ -28,12 +28,12 @@ GID_BUILDINGS = "1669987517"  # tous les bâtiments : on n'en garde que les fami
 # Mapping ressource -> pool (maintenu à la main : non fourni par le Game Data officiel).
 POOLS = {
     "EARTH": "0xc356cd52364541379ad4d31a889b7031e758220a",
-    "WATER": "0xe9c0995144a199241a5c46ccb7e7cd439af3ac75",
+    "WATER": "0xf14ad4a21a9e71ba967b8b99e278d03a1933b44a",
     "FIRE": "0xe973dc221bb031010ec673105ed8b04c9e713b9d",
     "MUD": "0xb287ea5a5cd4f2b74571e30fdec96241aa5163d9",
     "CLAY": "0x8b1a1b7b43a53904b0a05406c13399079e553501",
     "SAND": "0x6d8839a585f7877a5e218a217c07334980f04a4a",
-    "COPPER": "0xc0f4621ab3cd1405952015c84c5063db708c67d9",
+    "COPPER": "0xa09dda31b854720b6d2f28dee9c87b05d0b80d14",
     "STEEL": "0x70c063f17dacb35e4b3df06c8f36020416a44a3c",
     "SCREWS": "0x0016c4c602cc1a96a9d35fe133a7e374d3cdc26d",
     "SEAWATER": "0xd1d6bb059c97295f7437ad423111047cbcddf4c6",
@@ -89,8 +89,8 @@ POOLS = {
 
 # Pools où la ressource est le QUOTE token (et non le base) : prix lu via le pont USD
 # (resource_usd / COIN_usd) au lieu de base_token_price_quote_token.
-# COPPER : seule pool liquide = USDC/COPPER (COPPER = quote). L'ancienne COPPER/COIN est morte.
-INVERTED = {"COPPER"}
+# WATER : pool la plus liquide = COIN/WATER (WATER = quote). COPPER/COIN redevenue la plus liquide (2026-11).
+INVERTED = {"WATER"}
 
 # Éléments bruts à toujours garder (pas de recette "factory" propre, mais ont un pool).
 ELEMENTS = ["EARTH", "FIRE", "WATER", "DUST", "LUMBER"]

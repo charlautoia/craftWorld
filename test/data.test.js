@@ -90,3 +90,11 @@ test('niveaux relevÃ©s dans le jeu : l\'appli retombe sur Speed et Input de l\'Ã
     assert.strictEqual(recipe.input1_amount, input1);
   }
 });
+
+test('WATER et COPPER utilisent les pools les plus liquides (2026-11)', () => {
+  const r = n => DATA.resources.find(x => x.name === n);
+  assert.strictEqual(r('WATER').pool, '0xf14ad4a21a9e71ba967b8b99e278d03a1933b44a');
+  assert.strictEqual(r('WATER').quote, true);   // COIN / WATER : WATER = quote token
+  assert.strictEqual(r('COPPER').pool, '0xa09dda31b854720b6d2f28dee9c87b05d0b80d14');
+  assert.ok(!r('COPPER').quote);                // COPPER / COIN : prix direct
+});
